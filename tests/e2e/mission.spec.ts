@@ -70,7 +70,7 @@ test('plays a complete mission at 375px mobile width', async ({ page }) => {
   await page.goto('/');
   await completeTutorial(page);
   await finishMoonMission(page);
-  await expect(page.getByText(/real nasa science/i)).toBeVisible();
+  await expect(page.locator('.science-card').getByText(/real nasa science/i)).toBeVisible();
 });
 
 test('shows Earth advice arriving late on a Mars mission', async ({ page }) => {
