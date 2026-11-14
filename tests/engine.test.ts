@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ALLOCATION_OPTIONS, BATTERY_CAPACITY, advanceTurn, allocationTotal, createMission, earthAdvice, missionAdviceDelay, normalizeAllocation, quietEvent, solarForTurn } from '../src/engine/game';
 import type { GameEvent } from '../src/engine/types';
+import { DEMO_SEED, missionCode, seedFromSearch } from '../src/engine/missionCode';
 
 const event = (kind: GameEvent['kind'], severity = 2): GameEvent => ({ kind, severity, title: kind, message: kind });
 
@@ -60,6 +61,13 @@ describe('outpost engine', () => {
     const after = advanceTurn(state, { lifeSupport: 5, shielding: 3, greenhouse: 2, science: 1 }).state;
     expect(after.event).toEqual(forecast);
     expect(after.nextEvent).not.toEqual(forecast);
+  });
+
+  it('supports reproducible URL mission codes while ordinary missions remain random', () => {
+    expect(seedFromSearch('?seed=42')).toBe(42);
+    expect(seedFromSearch('?seed=bad')).toBeUndefined();
+    expect(seedFromSearch('?seed=42&demo=1')).toBe(DEMO_SEED);
+    expect(missionCode(42)).toBe('SOL-0000016');
   });
 
   it('can complete a 30-sol mission with a planned day and night budget', () => {
