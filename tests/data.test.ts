@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calibrationFromData, getRadiation, getScienceCard, getSpaceWeather, loadNasaData } from '../src/data/nasa';
+import { calibrationFromData, getRadiation, getScienceCard, getSpaceWeather, ISS_REFERENCE_DOSE_RATE_UG_PER_HOUR, loadNasaData } from '../src/data/nasa';
 import { archivedScience, archivedWeather } from '../src/data/fallback';
 
 const jsonResponse = (body: unknown, status = 200): Response => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
@@ -16,6 +16,7 @@ describe('NASA data layer', () => {
     const radiation = await getRadiation(fetcher);
     expect(radiation.badge).toBe('LIVE');
     expect(radiation.unit).toBe('µGy/h');
+    expect(radiation.readingDate).toBe('2022-04-01 to 2022-04-02');
     expect((await getScienceCard(fetcher)).badge).toBe('LIVE');
   });
 
@@ -47,12 +48,10 @@ describe('NASA data layer', () => {
   });
 
   it('keeps realistic microgray-per-hour values inside the dose multiplier range', () => {
-    const low = calibrationFromData({ weather: archivedWeather, science: archivedScience, radiation: { doseRateUgPerHour: 0.34, unit: 'µGy/h', badge: 'LIVE', source: 'test' } });
-    const high = calibrationFromData({ weather: archivedWeather, science: archivedScience, radiation: { doseRateUgPerHour: 0.48, unit: 'µGy/h', badge: 'LIVE', source: 'test' } });
-    expect(low.doseMultiplier).toBeCloseTo(0.34 / 0.42);
-    expect(high.doseMultiplier).toBeCloseTo(0.48 / 0.42);
-    expect(low.doseMultiplier).not.toBe(0.5);
-    expect(high.doseMultiplier).not.toBe(1.6);
+    const low = calibrationFromData({ weather: archivedWeather, science: archivedScience, radiation: { doseRateUgPerHour: 4, readingDate: '2022-04-02', unit: 'µGy/h', badge: 'LIVE', source: 'test' } });
+    const high = calibrationFromData({ weather: archivedWeather, science: archivedScience, radiation: { doseRateUgPerHour: 6, readingDate: '2022-04-02', unit: 'µGy/h', badge: 'LIVE', source: 'test' } });
+    expect(low.doseMultiplier).toBeCloseTo(4 / ISS_REFERENCE_DOSE_RATE_UG_PER_HOUR);
+    expect(high.doseMultiplier).toBeCloseTo(6 / ISS_REFERENCE_DOSE_RATE_UG_PER_HOUR);
   });
 
   it('uses a dated local snapshot when browser NASA requests fail', async () => {

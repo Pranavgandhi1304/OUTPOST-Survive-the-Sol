@@ -7,8 +7,8 @@ const now = new Date();
 const endDate = day(now);
 const startDate = day(new Date(now.getTime() - 14 * 86_400_000));
 const donkiBase = 'https://ccmc.gsfc.nasa.gov/DONKI-API/get';
-const radLabEnd = now.toISOString().slice(0, 16);
-const radLabStart = new Date(now.getTime() - 7 * 86_400_000).toISOString().slice(0, 16);
+const radLabStart = '2022-04-01T23:00';
+const radLabEnd = '2022-04-02T01:05';
 const radLabUrl = `https://visualization.osdr.nasa.gov/radlab/api/?spacecraft=ISS&instrument=DosTel&timestamp%3E=${encodeURIComponent(radLabStart)}&timestamp%3C=${encodeURIComponent(radLabEnd)}&absorbed_dose_rate&format=json`;
 const osdrUrl = 'https://osdr.nasa.gov/osdr/data/search?term=space%20biology&from=0&size=10';
 
@@ -55,7 +55,7 @@ const main = async (): Promise<void> => {
     fetchedAt: now.toISOString(),
     sourceUrls: [...donkiUrls, radLabUrl, osdrUrl],
     weather: { severity: Math.min(3, Math.max(1, Math.ceil(eventCount / 3))), events: eventCount, eventClass: `${kind}${classification}`, eventDate: dateFrom(event), eventId: identifier },
-    ...(radLabRate(radLab) ? { radiation: { doseRateUgPerHour: radLabRate(radLab)! } } : {}),
+    ...(radLabRate(radLab) ? { radiation: { doseRateUgPerHour: radLabRate(radLab)!, readingDate: '2022-04-01 to 2022-04-02' } } : {}),
     ...(study && typeof study['Study Title'] === 'string' && typeof study.Accession === 'string' ? { science: { title: study['Study Title'], studyId: study.Accession, description: 'A NASA OSDR space-biology study preserved in this dated snapshot.', url: `https://osdr.nasa.gov/bio/repo/data/studies/${study.Accession}` } } : {}),
   };
   const directory = join(process.cwd(), 'public', 'data');

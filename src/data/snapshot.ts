@@ -4,7 +4,7 @@ export interface NasaSnapshot {
   fetchedAt: string;
   sourceUrls: string[];
   weather: { severity: number; events: number; eventClass: string; eventDate: string; eventId: string };
-  radiation?: { doseRateUgPerHour: number };
+  radiation?: { doseRateUgPerHour: number; readingDate: string };
   science?: { title: string; studyId: string; description: string; url: string };
 }
 
@@ -19,7 +19,7 @@ export const isSnapshot = (value: unknown): value is NasaSnapshot => {
 export const dataFromSnapshot = (snapshot: NasaSnapshot, fallback: NasaDataBundle): NasaDataBundle => {
   const badge = snapshotBadge(snapshot.fetchedAt);
   const weather: SpaceWeather = { ...snapshot.weather, badge, source: `NASA CCMC DONKI snapshot fetched ${snapshot.fetchedAt}.` };
-  const radiation: RadiationReading = snapshot.radiation ? { doseRateUgPerHour: snapshot.radiation.doseRateUgPerHour, unit: 'µGy/h', badge, source: `NASA OSDR RadLab snapshot fetched ${snapshot.fetchedAt}.` } : fallback.radiation;
+  const radiation: RadiationReading = snapshot.radiation ? { doseRateUgPerHour: snapshot.radiation.doseRateUgPerHour, readingDate: snapshot.radiation.readingDate, unit: 'µGy/h', badge, source: `NASA OSDR RadLab snapshot fetched ${snapshot.fetchedAt}.` } : fallback.radiation;
   const science: ScienceCard = snapshot.science ? { ...snapshot.science, badge } : fallback.science;
   return { weather, radiation, science };
 };

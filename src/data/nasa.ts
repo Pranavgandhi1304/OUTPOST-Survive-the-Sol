@@ -5,6 +5,9 @@ import type { NasaDataBundle, RadiationReading, ScienceCard, SpaceWeather } from
 export type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 const CACHE_PREFIX = 'outpost:nasa:';
 const CACHE_MS = 30 * 60 * 1000;
+const RADLAB_START = '2022-04-01T23:00';
+const RADLAB_END = '2022-04-02T01:05';
+export const ISS_REFERENCE_DOSE_RATE_UG_PER_HOUR = 5;
 const dateOnly = (date: Date): string => date.toISOString().slice(0, 10);
 export const snapshotUrl = (): string => `${import.meta.env.BASE_URL}data/nasa-snapshot.json`;
 
@@ -110,16 +113,14 @@ export const getSpaceWeather = async (fetcher: FetchLike = fetch, now = new Date
   }
 };
 
-export const getRadiation = async (fetcher: FetchLike = fetch, now = new Date()): Promise<RadiationReading> => {
+export const getRadiation = async (fetcher: FetchLike = fetch): Promise<RadiationReading> => {
   try {
-    const end = now.toISOString().slice(0, 16);
-    const start = new Date(now.getTime() - 7 * 86_400_000).toISOString().slice(0, 16);
-    const url = `https://visualization.osdr.nasa.gov/radlab/api/?spacecraft=ISS&instrument=DosTel&timestamp%3E=${encodeURIComponent(start)}&timestamp%3C=${encodeURIComponent(end)}&absorbed_dose_rate&format=json`;
-    const response = await cachedJson<unknown>(`radlab-iss-${end.slice(0, 10)}`, url, fetcher);
+    const url = `https://visualization.osdr.nasa.gov/radlab/api/?spacecraft=ISS&instrument=DosTel&timestamp%3E=${encodeURIComponent(RADLAB_START)}&timestamp%3C=${encodeURIComponent(RADLAB_END)}&absorbed_dose_rate&format=json`;
+    const response = await cachedJson<unknown>('radlab-iss-2022-04-02', url, fetcher);
     const rows = asRadLabRows(response);
     const rates = rows.map((row) => Number(row.absorbed_dose_rate)).filter((rate) => Number.isFinite(rate) && rate > 0);
     if (rates.length === 0) throw new Error('No dose rates');
-    return { doseRateUgPerHour: rates.reduce((total, rate) => total + rate, 0) / rates.length, unit: 'µGy/h', badge: 'LIVE', source: 'NASA OSDR RadLab ISS absorbed dose-rate readings (µGy/h).' };
+    return { doseRateUgPerHour: rates.reduce((total, rate) => total + rate, 0) / rates.length, readingDate: '2022-04-01 to 2022-04-02', unit: 'µGy/h', badge: 'LIVE', source: 'NASA OSDR RadLab ISS absorbed dose-rate readings (µGy/h).' };
   } catch {
     return archivedRadiation;
   }
@@ -161,5 +162,5 @@ export const loadNasaData = async (fetcher: FetchLike = fetch): Promise<NasaData
 
 export const calibrationFromData = (data: NasaDataBundle, useTodayWeather = false): { stormSeverity: number; doseMultiplier: number } => ({
   stormSeverity: useTodayWeather ? Math.max(0, data.weather.severity - 1) : 0,
-  doseMultiplier: Math.min(1.6, Math.max(0.5, data.radiation.doseRateUgPerHour / 0.42)),
+  doseMultiplier: Math.min(1.6, Math.max(0.5, data.radiation.doseRateUgPerHour / ISS_REFERENCE_DOSE_RATE_UG_PER_HOUR)),
 });

@@ -12,6 +12,7 @@ export interface SpaceWeather {
 
 export interface RadiationReading {
   doseRateUgPerHour: number;
+  readingDate: string;
   unit: 'µGy/h';
   badge: DataBadge;
   source: string;

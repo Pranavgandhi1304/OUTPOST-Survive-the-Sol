@@ -14,6 +14,10 @@
     "eventDate": "2026-11-05",
     "eventId": "2026-11-05T18:21:00-FLR-001"
   },
+  "radiation": {
+    "doseRateUgPerHour": 5.85745974242676,
+    "readingDate": "2022-04-01 to 2022-04-02"
+  },
   "science": {
     "title": "Quantifying Cancellous Bone Structural Changes in Microgravity: Axial Skeleton Results from the RR-1 Mission",
     "studyId": "OSD-489",
