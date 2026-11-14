@@ -1,4 +1,5 @@
 import { archivedRadiation, archivedScience, archivedWeather } from './fallback';
+import { dataFromSnapshot, isSnapshot } from './snapshot';
 import type { NasaDataBundle, RadiationReading, ScienceCard, SpaceWeather } from './types';
 
 export type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
@@ -75,7 +76,8 @@ export const getSpaceWeather = async (fetcher: FetchLike = fetch, now = new Date
     const [kind, records] = grouped.find(([, entries]) => entries.length > 0)!;
     const record = records[0];
     const classification = typeof record.classType === 'string' ? ` · ${record.classType}` : '';
-    return { severity: Math.min(3, Math.max(1, Math.ceil(count / 3))), events: count, eventClass: `${kind}${classification}`, eventDate: eventDate(record, end), badge: 'LIVE', source: 'NASA CCMC DONKI FLR, CME, and GST events from the last 14 days.' };
+    const eventId = ['flrID', 'activityID', 'gstID'].map((key) => record[key]).find((value): value is string => typeof value === 'string');
+    return { severity: Math.min(3, Math.max(1, Math.ceil(count / 3))), events: count, eventClass: `${kind}${classification}`, eventDate: eventDate(record, end), eventId, badge: 'LIVE', source: 'NASA CCMC DONKI FLR, CME, and GST events from the last 14 days.' };
   } catch {
     return archivedWeather;
   }
@@ -111,8 +113,23 @@ export const getScienceCard = async (fetcher: FetchLike = fetch): Promise<Scienc
 };
 
 export const loadNasaData = async (fetcher: FetchLike = fetch): Promise<NasaDataBundle> => {
+  const fallback: NasaDataBundle = { weather: archivedWeather, radiation: archivedRadiation, science: archivedScience };
+  let snapshotData: NasaDataBundle | undefined;
+  try {
+    const response = await fetcher('/data/nasa-snapshot.json');
+    if (response.ok) {
+      const snapshot = await response.json() as unknown;
+      if (isSnapshot(snapshot)) snapshotData = dataFromSnapshot(snapshot, fallback);
+    }
+  } catch {
+    // A bundled snapshot is optional; individual source fallbacks remain available.
+  }
   const [weather, radiation, science] = await Promise.all([getSpaceWeather(fetcher), getRadiation(fetcher), getScienceCard(fetcher)]);
-  return { weather, radiation, science };
+  return {
+    weather: weather.badge === 'LIVE' ? weather : snapshotData?.weather ?? weather,
+    radiation: radiation.badge === 'LIVE' ? radiation : snapshotData?.radiation ?? radiation,
+    science: science.badge === 'LIVE' ? science : snapshotData?.science ?? science,
+  };
 };
 
 export const calibrationFromData = (data: NasaDataBundle, useTodayWeather = false): { stormSeverity: number; doseMultiplier: number } => ({

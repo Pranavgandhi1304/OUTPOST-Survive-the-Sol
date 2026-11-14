@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calibrationFromData, getRadiation, getScienceCard, getSpaceWeather } from '../src/data/nasa';
+import { calibrationFromData, getRadiation, getScienceCard, getSpaceWeather, loadNasaData } from '../src/data/nasa';
 import { archivedScience, archivedWeather } from '../src/data/fallback';
 
 const jsonResponse = (body: unknown, status = 200): Response => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
@@ -26,6 +26,17 @@ describe('NASA data layer', () => {
     expect(high.doseMultiplier).toBeCloseTo(0.48 / 0.42);
     expect(low.doseMultiplier).not.toBe(0.5);
     expect(high.doseMultiplier).not.toBe(1.6);
+  });
+
+  it('uses a dated local snapshot when browser NASA requests fail', async () => {
+    const fetcher = async (url: RequestInfo | URL): Promise<Response> => {
+      if (String(url) === '/data/nasa-snapshot.json') return jsonResponse({ fetchedAt: '2026-11-14T01:26:10.506Z', sourceUrls: ['https://example.test'], weather: { severity: 2, events: 4, eventClass: 'FLR · M2.0', eventDate: '2026-11-05', eventId: 'real-flare-id' } });
+      return jsonResponse({}, 429);
+    };
+    const data = await loadNasaData(fetcher);
+    expect(data.weather.badge).toBe('NASA data fetched 2026-11-14');
+    expect(data.weather.eventId).toBe('real-flare-id');
+    expect(data.weather.badge).not.toBe('LIVE');
   });
 
   it('uses archived fallback for timeout, 429, malformed JSON, and empty data', async () => {

@@ -1,0 +1,23 @@
+{
+  "fetchedAt": "2026-11-14T01:27:02.515Z",
+  "sourceUrls": [
+    "https://ccmc.gsfc.nasa.gov/DONKI-API/get/FLR?startDate=2026-10-31&endDate=2026-11-14",
+    "https://ccmc.gsfc.nasa.gov/DONKI-API/get/CME?startDate=2026-10-31&endDate=2026-11-14",
+    "https://ccmc.gsfc.nasa.gov/DONKI-API/get/GST?startDate=2026-10-31&endDate=2026-11-14",
+    "https://visualization.osdr.nasa.gov/radlab/api/?spacecraft=ISS&instrument=DosTel&timestamp%3E=2026-11-07T01%3A27&timestamp%3C=2026-11-14T01%3A27&absorbed_dose_rate&format=json",
+    "https://osdr.nasa.gov/osdr/data/search?term=space%20biology&from=0&size=10"
+  ],
+  "weather": {
+    "severity": 3,
+    "events": 43,
+    "eventClass": "FLR · M3.5",
+    "eventDate": "2026-11-05",
+    "eventId": "2026-11-05T18:21:00-FLR-001"
+  },
+  "science": {
+    "title": "Quantifying Cancellous Bone Structural Changes in Microgravity: Axial Skeleton Results from the RR-1 Mission",
+    "studyId": "OSD-489",
+    "description": "A NASA OSDR space-biology study preserved in this dated snapshot.",
+    "url": "https://osdr.nasa.gov/bio/repo/data/studies/OSD-489"
+  }
+}
