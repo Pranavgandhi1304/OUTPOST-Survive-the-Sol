@@ -38,6 +38,13 @@ describe('outpost engine', () => {
     expect(drawn.battery).toBeLessThan(12);
   });
 
+  it('records a plain-language replay note when a requested plan exceeds power', () => {
+    const mission = { ...createMission('moon'), turn: 20, battery: 0 };
+    const result = advanceTurn(mission, { lifeSupport: 6, shielding: 3, greenhouse: 3, science: 2 }, quietEvent());
+    expect(result.state.replay[0].powerShortfall).toBeGreaterThan(0);
+    expect(result.state.replay[0].note).toContain('You asked for 14 units but only 3 were available, so the crew lost health.');
+  });
+
   it('ends missions for air, health, radiation, and food failures', () => {
     const noPower = { lifeSupport: 0, shielding: 0, greenhouse: 0, science: 0 };
     expect(advanceTurn({ ...createMission('moon'), air: 1 }, noPower, quietEvent()).state.outcome).toBe('failed');

@@ -97,7 +97,8 @@ export const advanceTurn = (state: MissionState, requested: Allocation, forcedEv
   const availablePower = solarPower + state.battery;
   const allocation = normalizeAllocation(requested, availablePower);
   const usedPower = sum(allocation);
-  const powerShortfall = Math.max(0, sum(requested) - availablePower);
+  const requestedPower = sum(requested);
+  const powerShortfall = Math.max(0, requestedPower - availablePower);
   const surplus = Math.max(0, solarPower - usedPower);
   const batteryDraw = Math.max(0, usedPower - solarPower);
   const battery = clamp(state.battery - batteryDraw + surplus, 0, BATTERY_CAPACITY);
@@ -126,8 +127,10 @@ export const advanceTurn = (state: MissionState, requested: Allocation, forcedEv
   };
   const failureReason = failure(next);
   const completed = next.turn > TURN_COUNT;
-  const note = failureReason ?? (completed ? 'The crew completed the 30-sol mission.' : event.message);
-  const replayEntry = { turn: state.turn, allocation, event, air: next.air, shielding: next.shielding, health: next.health, power: next.power, note };
+  const outcomeNote = failureReason ?? (completed ? 'The crew completed the 30-sol mission.' : event.message);
+  const shortfallNote = powerShortfall > 0 ? `You asked for ${requestedPower} units but only ${availablePower} were available, so the crew lost health.` : '';
+  const note = [shortfallNote, outcomeNote].filter(Boolean).join(' ');
+  const replayEntry = { turn: state.turn, allocation, requestedPower, availablePower, powerShortfall, event, air: next.air, shielding: next.shielding, health: next.health, power: next.power, note };
   next.replay = [...state.replay, replayEntry];
   if (failureReason) {
     next.outcome = 'failed';

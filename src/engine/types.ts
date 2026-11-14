@@ -18,6 +18,9 @@ export interface GameEvent {
 export interface ReplayEntry {
   turn: number;
   allocation: Allocation;
+  requestedPower: number;
+  availablePower: number;
+  powerShortfall: number;
   event: GameEvent;
   air: number;
   shielding: number;
