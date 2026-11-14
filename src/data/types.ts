@@ -27,7 +27,7 @@ export interface ScienceCard {
 }
 
 export interface NasaDataBundle {
-  weather: SpaceWeather;
-  radiation: RadiationReading;
-  science: ScienceCard;
+  weather?: SpaceWeather;
+  radiation?: RadiationReading;
+  science?: ScienceCard;
 }

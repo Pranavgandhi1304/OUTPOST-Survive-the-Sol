@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { calibrationFromData, getRadiation, getScienceCard, getSpaceWeather, ISS_REFERENCE_DOSE_RATE_UG_PER_HOUR, loadNasaData } from '../src/data/nasa';
-import { archivedScience, archivedWeather } from '../src/data/fallback';
+import type { NasaDataBundle } from '../src/data/types';
 
 const jsonResponse = (body: unknown, status = 200): Response => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
+const verifiedData: NasaDataBundle = {
+  weather: { severity: 1, events: 1, eventClass: 'FLR · C1.0', eventDate: '2022-04-02', badge: 'LIVE', source: 'test' },
+  science: { title: 'Study', description: 'Verified NASA study.', studyId: 'OSD-1', badge: 'LIVE', url: 'https://example.test' },
+};
 
 describe('NASA data layer', () => {
   it('shows LIVE labels for valid documented-shaped responses', async () => {
@@ -12,12 +16,12 @@ describe('NASA data layer', () => {
       if (text.includes('osdr/data/search')) return jsonResponse({ hits: { hits: [{ _source: { 'Study Title': 'Space biology plant study', Accession: 'OSD-1', 'Space Program': 'NASA' } }] } });
       return jsonResponse([{ activityID: 'x' }]);
     };
-    expect((await getSpaceWeather(fetcher, new Date('2026-01-02'))).badge).toBe('LIVE');
+    expect((await getSpaceWeather(fetcher, new Date('2026-01-02')))!.badge).toBe('LIVE');
     const radiation = await getRadiation(fetcher);
-    expect(radiation.badge).toBe('LIVE');
-    expect(radiation.unit).toBe('µGy/h');
-    expect(radiation.readingDate).toBe('2022-04-01 to 2022-04-02');
-    expect((await getScienceCard(fetcher)).badge).toBe('LIVE');
+    expect(radiation!.badge).toBe('LIVE');
+    expect(radiation!.unit).toBe('µGy/h');
+    expect(radiation!.readingDate).toBe('2022-04-01 to 2022-04-02');
+    expect((await getScienceCard(fetcher))!.badge).toBe('LIVE');
   });
 
   it.each([
@@ -31,8 +35,8 @@ describe('NASA data layer', () => {
       ? jsonResponse([{ flrID: 'flare-id', classType, beginTime: '2026-01-01T00:00Z' }])
       : jsonResponse([]);
     const weather = await getSpaceWeather(fetcher, new Date('2026-01-02T00:00Z'));
-    expect(weather.severity).toBe(severity);
-    expect(weather.eventClass).toBe(`FLR · ${classType}`);
+    expect(weather!.severity).toBe(severity);
+    expect(weather!.eventClass).toBe(`FLR · ${classType}`);
   });
 
   it('uses CME speed only as a secondary strength signal', async () => {
@@ -42,14 +46,14 @@ describe('NASA data layer', () => {
       return jsonResponse([]);
     };
     const weather = await getSpaceWeather(fetcher, new Date('2026-01-03T00:00Z'));
-    expect(weather.severity).toBe(3);
-    expect(weather.eventClass).toBe('CME · 1600 km/s');
-    expect(weather.eventId).toBe('fast-cme');
+    expect(weather!.severity).toBe(3);
+    expect(weather!.eventClass).toBe('CME · 1600 km/s');
+    expect(weather!.eventId).toBe('fast-cme');
   });
 
   it('keeps realistic microgray-per-hour values inside the dose multiplier range', () => {
-    const low = calibrationFromData({ weather: archivedWeather, science: archivedScience, radiation: { doseRateUgPerHour: 4, readingDate: '2022-04-02', unit: 'µGy/h', badge: 'LIVE', source: 'test' } });
-    const high = calibrationFromData({ weather: archivedWeather, science: archivedScience, radiation: { doseRateUgPerHour: 6, readingDate: '2022-04-02', unit: 'µGy/h', badge: 'LIVE', source: 'test' } });
+    const low = calibrationFromData({ ...verifiedData, radiation: { doseRateUgPerHour: 4, readingDate: '2022-04-02', unit: 'µGy/h', badge: 'LIVE', source: 'test' } });
+    const high = calibrationFromData({ ...verifiedData, radiation: { doseRateUgPerHour: 6, readingDate: '2022-04-02', unit: 'µGy/h', badge: 'LIVE', source: 'test' } });
     expect(low.doseMultiplier).toBeCloseTo(4 / ISS_REFERENCE_DOSE_RATE_UG_PER_HOUR);
     expect(high.doseMultiplier).toBeCloseTo(6 / ISS_REFERENCE_DOSE_RATE_UG_PER_HOUR);
   });
@@ -60,19 +64,19 @@ describe('NASA data layer', () => {
       return jsonResponse({}, 429);
     };
     const data = await loadNasaData(fetcher);
-    expect(data.weather.badge).toBe('NASA data fetched 2026-11-14');
-    expect(data.weather.eventId).toBe('real-flare-id');
-    expect(data.weather.badge).not.toBe('LIVE');
+    expect(data.weather!.badge).toBe('NASA data fetched 2026-11-14');
+    expect(data.weather!.eventId).toBe('real-flare-id');
+    expect(data.weather!.badge).not.toBe('LIVE');
   });
 
-  it('uses archived fallback for timeout, 429, malformed JSON, and empty data', async () => {
+  it('leaves a card absent when neither live nor snapshot data is verified', async () => {
     const timeout = async (): Promise<Response> => { throw new Error('Timed out'); };
     const rateLimited = async (): Promise<Response> => jsonResponse({}, 429);
     const malformed = async (): Promise<Response> => new Response('{nope', { status: 200 });
     const empty = async (): Promise<Response> => jsonResponse([]);
-    expect((await getSpaceWeather(timeout)).badge).toMatch(/^ARCHIVED/);
-    expect((await getRadiation(rateLimited)).badge).toMatch(/^ARCHIVED/);
-    expect((await getScienceCard(malformed)).badge).toMatch(/^ARCHIVED/);
-    expect((await getRadiation(empty)).badge).toMatch(/^ARCHIVED/);
+    expect(await getSpaceWeather(timeout)).toBeUndefined();
+    expect(await getRadiation(rateLimited)).toBeUndefined();
+    expect(await getScienceCard(malformed)).toBeUndefined();
+    expect(await getRadiation(empty)).toBeUndefined();
   });
 });

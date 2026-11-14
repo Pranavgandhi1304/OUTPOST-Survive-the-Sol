@@ -1,4 +1,3 @@
-import { archivedRadiation, archivedScience, archivedWeather } from './fallback';
 import { dataFromSnapshot, isSnapshot } from './snapshot';
 import type { NasaDataBundle, RadiationReading, ScienceCard, SpaceWeather } from './types';
 
@@ -84,7 +83,7 @@ interface WeatherCandidate {
   record: Record<string, unknown>;
 }
 
-export const getSpaceWeather = async (fetcher: FetchLike = fetch, now = new Date()): Promise<SpaceWeather> => {
+export const getSpaceWeather = async (fetcher: FetchLike = fetch, now = new Date()): Promise<SpaceWeather | undefined> => {
   try {
     const end = dateOnly(now);
     const start = dateOnly(new Date(now.getTime() - 14 * 86_400_000));
@@ -108,12 +107,10 @@ export const getSpaceWeather = async (fetcher: FetchLike = fetch, now = new Date
     const record = strongest.record;
     const eventId = ['flrID', 'activityID', 'gstID'].map((key) => record[key]).find((value): value is string => typeof value === 'string');
     return { severity: strongest.severity, events: count, eventClass: strongest.eventClass, eventDate: eventDate(record, end), eventId, badge: 'LIVE', source: 'NASA CCMC DONKI FLR, CME, and GST events from the last 14 days.' };
-  } catch {
-    return archivedWeather;
-  }
+  } catch { return undefined; }
 };
 
-export const getRadiation = async (fetcher: FetchLike = fetch): Promise<RadiationReading> => {
+export const getRadiation = async (fetcher: FetchLike = fetch): Promise<RadiationReading | undefined> => {
   try {
     const url = `https://visualization.osdr.nasa.gov/radlab/api/?spacecraft=ISS&instrument=DosTel&timestamp%3E=${encodeURIComponent(RADLAB_START)}&timestamp%3C=${encodeURIComponent(RADLAB_END)}&absorbed_dose_rate&format=json`;
     const response = await cachedJson<unknown>('radlab-iss-2022-04-02', url, fetcher);
@@ -121,12 +118,10 @@ export const getRadiation = async (fetcher: FetchLike = fetch): Promise<Radiatio
     const rates = rows.map((row) => Number(row.absorbed_dose_rate)).filter((rate) => Number.isFinite(rate) && rate > 0);
     if (rates.length === 0) throw new Error('No dose rates');
     return { doseRateUgPerHour: rates.reduce((total, rate) => total + rate, 0) / rates.length, readingDate: '2022-04-01 to 2022-04-02', unit: 'µGy/h', badge: 'LIVE', source: 'NASA OSDR RadLab ISS absorbed dose-rate readings (µGy/h).' };
-  } catch {
-    return archivedRadiation;
-  }
+  } catch { return undefined; }
 };
 
-export const getScienceCard = async (fetcher: FetchLike = fetch): Promise<ScienceCard> => {
+export const getScienceCard = async (fetcher: FetchLike = fetch): Promise<ScienceCard | undefined> => {
   try {
     const response = await cachedJson<unknown>('osdr-space-biology', 'https://osdr.nasa.gov/osdr/data/search?term=space%20biology&from=0&size=10', fetcher);
     const first = asOsdrStudies(response).find(isSpaceflightStudy);
@@ -135,32 +130,25 @@ export const getScienceCard = async (fetcher: FetchLike = fetch): Promise<Scienc
     const id = typeof first.Accession === 'string' ? first.Accession : undefined;
     if (!title || !id) throw new Error('No usable OSDR study');
     return { title, description: 'A current NASA space-biology study found through OSDR.', studyId: id, badge: 'LIVE', url: `https://osdr.nasa.gov/bio/repo/data/studies/${id}` };
-  } catch {
-    return archivedScience;
-  }
+  } catch { return undefined; }
 };
 
 export const loadNasaData = async (fetcher: FetchLike = fetch): Promise<NasaDataBundle> => {
-  const fallback: NasaDataBundle = { weather: archivedWeather, radiation: archivedRadiation, science: archivedScience };
   let snapshotData: NasaDataBundle | undefined;
   try {
     const response = await fetcher(snapshotUrl());
     if (response.ok) {
       const snapshot = await response.json() as unknown;
-      if (isSnapshot(snapshot)) snapshotData = dataFromSnapshot(snapshot, fallback);
+      if (isSnapshot(snapshot)) snapshotData = dataFromSnapshot(snapshot);
     }
   } catch {
     // A bundled snapshot is optional; individual source fallbacks remain available.
   }
   const [weather, radiation, science] = await Promise.all([getSpaceWeather(fetcher), getRadiation(fetcher), getScienceCard(fetcher)]);
-  return {
-    weather: weather.badge === 'LIVE' ? weather : snapshotData?.weather ?? weather,
-    radiation: radiation.badge === 'LIVE' ? radiation : snapshotData?.radiation ?? radiation,
-    science: science.badge === 'LIVE' ? science : snapshotData?.science ?? science,
-  };
+  return { weather: weather ?? snapshotData?.weather, radiation: radiation ?? snapshotData?.radiation, science: science ?? snapshotData?.science };
 };
 
 export const calibrationFromData = (data: NasaDataBundle, useTodayWeather = false): { stormSeverity: number; doseMultiplier: number } => ({
-  stormSeverity: useTodayWeather ? Math.max(0, data.weather.severity - 1) : 0,
-  doseMultiplier: Math.min(1.6, Math.max(0.5, data.radiation.doseRateUgPerHour / ISS_REFERENCE_DOSE_RATE_UG_PER_HOUR)),
+  stormSeverity: useTodayWeather && data.weather ? Math.max(0, data.weather.severity - 1) : 0,
+  doseMultiplier: data.radiation ? Math.min(1.6, Math.max(0.5, data.radiation.doseRateUgPerHour / ISS_REFERENCE_DOSE_RATE_UG_PER_HOUR)) : 1,
 });

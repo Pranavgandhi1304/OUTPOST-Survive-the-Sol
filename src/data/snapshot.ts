@@ -16,10 +16,10 @@ export const isSnapshot = (value: unknown): value is NasaSnapshot => {
   return typeof snapshot.fetchedAt === 'string' && Array.isArray(snapshot.sourceUrls) && typeof snapshot.weather === 'object' && snapshot.weather !== null;
 };
 
-export const dataFromSnapshot = (snapshot: NasaSnapshot, fallback: NasaDataBundle): NasaDataBundle => {
+export const dataFromSnapshot = (snapshot: NasaSnapshot): NasaDataBundle => {
   const badge = snapshotBadge(snapshot.fetchedAt);
   const weather: SpaceWeather = { ...snapshot.weather, badge, source: `NASA CCMC DONKI snapshot fetched ${snapshot.fetchedAt}.` };
-  const radiation: RadiationReading = snapshot.radiation ? { doseRateUgPerHour: snapshot.radiation.doseRateUgPerHour, readingDate: snapshot.radiation.readingDate, unit: 'µGy/h', badge, source: `NASA OSDR RadLab snapshot fetched ${snapshot.fetchedAt}.` } : fallback.radiation;
-  const science: ScienceCard = snapshot.science ? { ...snapshot.science, badge } : fallback.science;
+  const radiation: RadiationReading | undefined = snapshot.radiation ? { doseRateUgPerHour: snapshot.radiation.doseRateUgPerHour, readingDate: snapshot.radiation.readingDate, unit: 'µGy/h', badge, source: `NASA OSDR RadLab snapshot fetched ${snapshot.fetchedAt}.` } : undefined;
+  const science: ScienceCard | undefined = snapshot.science ? { ...snapshot.science, badge } : undefined;
   return { weather, radiation, science };
 };
