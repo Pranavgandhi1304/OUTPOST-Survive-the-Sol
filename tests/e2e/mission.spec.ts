@@ -58,6 +58,16 @@ test('plays a complete mission at 375px mobile width', async ({ page }) => {
   await expect(page.getByText(/real nasa science/i)).toBeVisible();
 });
 
+test('shows Earth advice arriving late on a Mars mission', async ({ page }) => {
+  await silenceNasa(page);
+  await page.goto('/');
+  await page.getByRole('button', { name: /mars jezero crater/i }).click();
+  await page.getByRole('button', { name: /start the 30-sol mission/i }).click();
+  await expect(page.getByText(/earth’s first advice is still in transit/i)).toBeVisible();
+  await page.getByRole('button', { name: /run sol 1/i }).click();
+  await expect(page.getByText(/arrived .* minutes late/i)).toBeVisible();
+});
+
 test('has no axe violations on landing, mission, and debrief screens', async ({ page }) => {
   await silenceNasa(page);
   await page.goto('/');
