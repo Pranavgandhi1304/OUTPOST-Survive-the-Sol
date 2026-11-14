@@ -53,9 +53,22 @@ describe('outpost engine', () => {
   });
 
   it('has no free allocation choice', () => {
-    for (const choice of ALLOCATION_OPTIONS) {
-      expect(choice.improves).not.toEqual(choice.worsens);
-      expect(choice.worsens).toMatch(/Power/);
-    }
+    const base = createMission('moon', 812);
+    const none = advanceTurn(base, { lifeSupport: 0, shielding: 0, greenhouse: 0, science: 0 }, quietEvent()).state;
+    const life = advanceTurn(base, { lifeSupport: 1, shielding: 0, greenhouse: 0, science: 0 }, quietEvent()).state;
+    const shield = advanceTurn(base, { lifeSupport: 0, shielding: 1, greenhouse: 0, science: 0 }, quietEvent()).state;
+    const science = advanceTurn(base, { lifeSupport: 0, shielding: 0, greenhouse: 0, science: 1 }, quietEvent()).state;
+    const greenhouseFirst = advanceTurn(base, { lifeSupport: 0, shielding: 0, greenhouse: 1, science: 0 }, quietEvent()).state;
+    const greenhouse = advanceTurn(greenhouseFirst, { lifeSupport: 0, shielding: 0, greenhouse: 0, science: 0 }, quietEvent()).state;
+    const noGreenhouseSecond = advanceTurn(none, { lifeSupport: 0, shielding: 0, greenhouse: 0, science: 0 }, quietEvent()).state;
+    expect(life.air).toBeGreaterThan(none.air);
+    expect(shield.shielding).toBeGreaterThan(none.shielding);
+    expect(greenhouse.food).toBeGreaterThan(noGreenhouseSecond.food);
+    expect(science.science).toBeGreaterThan(none.science);
+    for (const choice of ALLOCATION_OPTIONS) expect(choice.worsens).toMatch(/Power/);
+    expect(life.power).toBeLessThan(none.power);
+    expect(shield.power).toBeLessThan(none.power);
+    expect(science.power).toBeLessThan(none.power);
+    expect(greenhouseFirst.power).toBeLessThan(none.power);
   });
 });
