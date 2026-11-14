@@ -12,7 +12,7 @@ export default [
     files: ['**/*.ts'],
     languageOptions: { parser: tsParser },
     plugins: { '@typescript-eslint': tseslint },
-    rules: tseslint.configs.recommended.rules,
+    rules: { ...tseslint.configs.recommended.rules, 'no-undef': 'off' },
   },
   prettier,
 ];
