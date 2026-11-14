@@ -4,7 +4,6 @@ import type { NasaDataBundle, RadiationReading, ScienceCard, SpaceWeather } from
 export type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 const CACHE_PREFIX = 'outpost:nasa:';
 const CACHE_MS = 30 * 60 * 1000;
-const nasaKey = (): string => import.meta.env.VITE_NASA_API_KEY || 'DEMO_KEY';
 const dateOnly = (date: Date): string => date.toISOString().slice(0, 10);
 
 const cachedJson = async <T>(key: string, url: string, fetcher: FetchLike, timeoutMs = 6_000): Promise<T> => {
@@ -42,15 +41,15 @@ export const getSpaceWeather = async (fetcher: FetchLike = fetch, now = new Date
   try {
     const end = dateOnly(now);
     const start = dateOnly(new Date(now.getTime() - 14 * 86_400_000));
-    const base = `https://api.nasa.gov/DONKI`;
-    const [flares, cmes, storms] = await Promise.all(['FLR', 'CME', 'GST'].map((kind) => cachedJson<unknown>(`donki-${kind}-${end}`, `${base}/${kind}?startDate=${start}&endDate=${end}&api_key=${nasaKey()}`, fetcher)));
+    const base = 'https://ccmc.gsfc.nasa.gov/DONKI-API/get';
+    const [flares, cmes, storms] = await Promise.all(['FLR', 'CME', 'GST'].map((kind) => cachedJson<unknown>(`donki-${kind}-${end}`, `${base}/${kind}?startDate=${start}&endDate=${end}`, fetcher)));
     const grouped = [['FLR', asArray(flares)], ['CME', asArray(cmes)], ['GST', asArray(storms)]] as const;
     const count = grouped.reduce((total, [, records]) => total + records.length, 0);
     if (count === 0) throw new Error('No recent DONKI events');
     const [kind, records] = grouped.find(([, entries]) => entries.length > 0)!;
     const record = records[0];
     const classification = typeof record.classType === 'string' ? ` · ${record.classType}` : '';
-    return { severity: Math.min(3, Math.max(1, Math.ceil(count / 3))), events: count, eventClass: `${kind}${classification}`, eventDate: eventDate(record, end), badge: 'LIVE', source: 'NASA DONKI FLR, CME, and GST events from the last 14 days.' };
+    return { severity: Math.min(3, Math.max(1, Math.ceil(count / 3))), events: count, eventClass: `${kind}${classification}`, eventDate: eventDate(record, end), badge: 'LIVE', source: 'NASA CCMC DONKI FLR, CME, and GST events from the last 14 days.' };
   } catch {
     return archivedWeather;
   }

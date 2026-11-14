@@ -1,6 +1,5 @@
 type JsonRecord = Record<string, unknown>;
 
-const apiKey = process.env.NASA_API_KEY || 'DEMO_KEY';
 const endDate = new Date().toISOString().slice(0, 10);
 const startDate = new Date(Date.now() - 14 * 86_400_000).toISOString().slice(0, 10);
 
@@ -34,14 +33,14 @@ const report = (name: string, value: unknown): JsonRecord[] => {
 };
 
 const assertDonki = (name: string, rows: JsonRecord[]): void => {
-  if (rows.length > 0 && !rows.some((row) => ['activityID', 'gstID', 'catalog'].some((key) => key in row))) throw new Error(`${name} parsing assumption failed: a non-empty DONKI record did not expose a known identifier.`);
+  if (rows.length > 0 && !rows.some((row) => ['flrID', 'activityID', 'gstID'].some((key) => key in row))) throw new Error(`${name} parsing assumption failed: a non-empty DONKI record did not expose a known identifier.`);
 };
 
 const main = async (): Promise<void> => {
-  console.log(`Checking NASA endpoints for ${startDate} through ${endDate} using ${apiKey === 'DEMO_KEY' ? 'DEMO_KEY' : 'NASA_API_KEY'}.`);
-  const donkiBase = `https://api.nasa.gov/DONKI`;
+  console.log(`Checking NASA endpoints for ${startDate} through ${endDate}.`);
+  const donkiBase = 'https://ccmc.gsfc.nasa.gov/DONKI-API/get';
   for (const kind of ['FLR', 'CME', 'GST']) {
-    const data = await requestJson(`DONKI ${kind}`, `${donkiBase}/${kind}?startDate=${startDate}&endDate=${endDate}&api_key=${apiKey}`);
+    const data = await requestJson(`DONKI ${kind}`, `${donkiBase}/${kind}?startDate=${startDate}&endDate=${endDate}`);
     assertDonki(`DONKI ${kind}`, report(`DONKI ${kind}`, data));
   }
   const radLab = report('RadLab ISS DosTel', await requestJson('RadLab ISS DosTel', 'https://visualization.osdr.nasa.gov/radlab/api/?spacecraft=ISS&instrument=DosTel&absorbed_dose_rate&format=json'));
