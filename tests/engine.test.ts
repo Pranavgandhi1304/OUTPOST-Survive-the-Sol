@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ALLOCATION_OPTIONS, BATTERY_CAPACITY, advanceTurn, allocationTotal, createMission, missionAdviceDelay, normalizeAllocation, quietEvent, solarForTurn } from '../src/engine/game';
+import { ALLOCATION_OPTIONS, BATTERY_CAPACITY, advanceTurn, allocationTotal, createMission, earthAdvice, missionAdviceDelay, normalizeAllocation, quietEvent, solarForTurn } from '../src/engine/game';
 import type { GameEvent } from '../src/engine/types';
 
 const event = (kind: GameEvent['kind'], severity = 2): GameEvent => ({ kind, severity, title: kind, message: kind });
@@ -50,6 +50,18 @@ describe('outpost engine', () => {
     expect(advanceTurn(createMission('mars', 99), allocation).state).toEqual(advanceTurn(createMission('mars', 99), allocation).state);
     expect(missionAdviceDelay('mars', 5)).toBeGreaterThanOrEqual(3);
     expect(missionAdviceDelay('mars', 5)).toBeLessThanOrEqual(22);
+    expect(earthAdvice('mars', 2, event('dustStorm'))).toContain('arrived');
+    expect(earthAdvice('moon', 2)).toContain('1 minute');
+  });
+
+  it('can complete a 30-sol mission with a planned day and night budget', () => {
+    let state = createMission('moon', 101);
+    for (let turn = 1; turn <= 30; turn += 1) {
+      const allocation = turn <= 15 ? { lifeSupport: 6, shielding: 3, greenhouse: 3, science: 2 } : { lifeSupport: 4, shielding: 1, greenhouse: 0, science: 0 };
+      state = advanceTurn(state, allocation, quietEvent()).state;
+    }
+    expect(state.outcome).toBe('won');
+    expect(state.science).toBeGreaterThanOrEqual(24);
   });
 
   it('has no free allocation choice', () => {

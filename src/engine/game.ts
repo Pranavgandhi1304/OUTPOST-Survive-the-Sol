@@ -130,5 +130,13 @@ export const advanceTurn = (state: MissionState, requested: Allocation, forcedEv
 
 export const missionAdviceDelay = (site: Site, turn: number): number => (site === 'mars' ? 3 + ((turn * 19) % 20) : 1);
 
+export const earthAdvice = (site: Site, turn: number, previousEvent?: GameEvent): string => {
+  if (site === 'moon') return 'Moon radio advice arrives in about 1 minute.';
+  const delay = missionAdviceDelay(site, turn);
+  if (!previousEvent || turn === 1) return `Earth’s first advice is still in transit. It will arrive in ${delay} minutes.`;
+  const focus = previousEvent.kind === 'solarStorm' ? 'keep shielding high' : previousEvent.kind === 'dustStorm' ? 'save battery power' : previousEvent.kind === 'equipmentFault' ? 'leave power for repairs' : 'protect air, shielding, and food together';
+  return `Earth’s advice for sol ${turn - 1} arrived ${delay} minutes late: ${focus}.`;
+};
+
 export const allocationTotal = sum;
 export const isEventKind = (event: GameEvent, kind: EventKind): boolean => event.kind === kind;
