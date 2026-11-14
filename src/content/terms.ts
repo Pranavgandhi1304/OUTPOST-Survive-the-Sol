@@ -1,0 +1,1 @@
+export const scienceTerms = '<strong>Radiation</strong> is tiny energy from space that can hurt people. <strong>Shielding</strong> is a thick safe wall. A <strong>battery</strong> saves extra Sun power for later.';
