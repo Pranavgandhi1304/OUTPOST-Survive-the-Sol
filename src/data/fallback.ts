@@ -10,7 +10,8 @@ export const archivedWeather: SpaceWeather = {
 };
 
 export const archivedRadiation: RadiationReading = {
-  doseRate: 0.42,
+  doseRateUgPerHour: 0.42,
+  unit: 'µGy/h',
   badge: 'ARCHIVED (2022-04-02)',
   source: 'Curated RadLab ISS DosTel reading in microgray per hour.',
 };

@@ -8,7 +8,8 @@ export interface SpaceWeather {
 }
 
 export interface RadiationReading {
-  doseRate: number;
+  doseRateUgPerHour: number;
+  unit: 'µGy/h';
   badge: `LIVE` | `ARCHIVED (${string})`;
   source: string;
 }

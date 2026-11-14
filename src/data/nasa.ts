@@ -39,6 +39,18 @@ const asOsdrStudies = (value: unknown): Record<string, unknown>[] => {
   return hits.map((hit) => (typeof hit === 'object' && hit !== null ? (hit as { _source?: unknown })._source : undefined)).filter((source): source is Record<string, unknown> => typeof source === 'object' && source !== null);
 };
 
+const asRadLabRows = (value: unknown): Record<string, unknown>[] => {
+  if (typeof value === 'object' && value !== null) {
+    const table = value as { columns?: unknown; data?: unknown };
+    if (Array.isArray(table.columns) && table.columns.every((column): column is string => typeof column === 'string') && Array.isArray(table.data)) {
+      const columns = table.columns as string[];
+      const data = table.data as unknown[];
+      return data.map((row) => Array.isArray(row) ? Object.fromEntries(columns.map((column, index) => [column, row[index]])) : row).filter((row): row is Record<string, unknown> => typeof row === 'object' && row !== null);
+    }
+  }
+  return asArray(value);
+};
+
 const isSpaceflightStudy = (study: Record<string, unknown>): boolean => {
   const title = typeof study['Study Title'] === 'string' ? study['Study Title'] : '';
   const program = typeof study['Space Program'] === 'string' ? study['Space Program'] : '';
@@ -69,13 +81,16 @@ export const getSpaceWeather = async (fetcher: FetchLike = fetch, now = new Date
   }
 };
 
-export const getRadiation = async (fetcher: FetchLike = fetch): Promise<RadiationReading> => {
+export const getRadiation = async (fetcher: FetchLike = fetch, now = new Date()): Promise<RadiationReading> => {
   try {
-    const response = await cachedJson<unknown>('radlab-iss', 'https://visualization.osdr.nasa.gov/radlab/api/?spacecraft=ISS&instrument=DosTel&absorbed_dose_rate&format=json', fetcher);
-    const rows = asArray(response);
+    const end = now.toISOString().slice(0, 16);
+    const start = new Date(now.getTime() - 7 * 86_400_000).toISOString().slice(0, 16);
+    const url = `https://visualization.osdr.nasa.gov/radlab/api/?spacecraft=ISS&instrument=DosTel&timestamp%3E=${encodeURIComponent(start)}&timestamp%3C=${encodeURIComponent(end)}&absorbed_dose_rate&format=json`;
+    const response = await cachedJson<unknown>(`radlab-iss-${end.slice(0, 10)}`, url, fetcher);
+    const rows = asRadLabRows(response);
     const rates = rows.map((row) => Number(row.absorbed_dose_rate)).filter((rate) => Number.isFinite(rate) && rate > 0);
     if (rates.length === 0) throw new Error('No dose rates');
-    return { doseRate: rates.reduce((total, rate) => total + rate, 0) / rates.length, badge: 'LIVE', source: 'NASA OSDR RadLab ISS absorbed dose-rate readings (microgray per hour).' };
+    return { doseRateUgPerHour: rates.reduce((total, rate) => total + rate, 0) / rates.length, unit: 'µGy/h', badge: 'LIVE', source: 'NASA OSDR RadLab ISS absorbed dose-rate readings (µGy/h).' };
   } catch {
     return archivedRadiation;
   }
@@ -102,5 +117,5 @@ export const loadNasaData = async (fetcher: FetchLike = fetch): Promise<NasaData
 
 export const calibrationFromData = (data: NasaDataBundle, useTodayWeather = false): { stormSeverity: number; doseMultiplier: number } => ({
   stormSeverity: useTodayWeather ? Math.max(0, data.weather.severity - 1) : 0,
-  doseMultiplier: Math.min(1.5, Math.max(0.7, data.radiation.doseRate / 0.42)),
+  doseMultiplier: Math.min(1.6, Math.max(0.5, data.radiation.doseRateUgPerHour / 0.42)),
 });
