@@ -58,6 +58,7 @@ export const createMission = (site: Site, seed = 2026, calibration = { stormSeve
   const [nextSeed, nextEvent] = eventFor(site, seed, calibration.stormSeverity);
   return {
     site,
+    missionSeed: seed >>> 0,
     turn: 1,
     power: site === 'moon' ? 17 : 14,
     air: 76,
@@ -137,10 +138,10 @@ export const advanceTurn = (state: MissionState, requested: Allocation, forcedEv
   return { state: next, availablePower, solarPower, usedPower, event };
 };
 
-export const missionAdviceDelay = (site: Site, turn: number): number => (site === 'mars' ? 3 + ((turn * 19) % 20) : 1);
+export const missionAdviceDelay = (site: Site, turn: number): number => (site === 'mars' ? 3 + ((turn * 19) % 20) : 1.3);
 
 export const earthAdvice = (site: Site, turn: number, previousEvent?: GameEvent): string => {
-  if (site === 'moon') return 'Moon radio advice arrives in about 1 minute.';
+  if (site === 'moon') return 'Moon radio advice arrives in about 1.3 seconds one-way.';
   const delay = missionAdviceDelay(site, turn);
   if (!previousEvent || turn === 1) return `Earth’s first advice is still in transit. It will arrive in ${delay} minutes.`;
   const focus = previousEvent.kind === 'solarStorm' ? 'keep shielding high' : previousEvent.kind === 'dustStorm' ? 'save battery power' : previousEvent.kind === 'equipmentFault' ? 'leave power for repairs' : 'protect air, shielding, and food together';

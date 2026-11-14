@@ -11,13 +11,7 @@ npm run dev
 
 If PowerShell blocks `npm.ps1` on this Windows machine, use `cmd /c npm run dev` instead. Open the local Vite address printed in the terminal.
 
-To use a personal NASA API key, create `.env.local`:
-
-```text
-VITE_NASA_API_KEY=your_key_here
-```
-
-The app defaults to NASA's `DEMO_KEY`; API failures use clearly dated archived records.
+NASA data is fetched directly from public NASA endpoints. If a browser request is unavailable, the game uses only its shipped, dated NASA snapshot and hides cards without verified data.
 
 ## Test and build
 

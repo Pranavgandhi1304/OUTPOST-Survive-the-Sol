@@ -28,6 +28,8 @@ export interface ReplayEntry {
 
 export interface MissionState {
   site: Site;
+  /** The original seed identifies this mission even as the RNG advances. */
+  missionSeed: number;
   turn: number;
   power: number;
   air: number;

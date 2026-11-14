@@ -52,7 +52,7 @@ describe('outpost engine', () => {
     expect(missionAdviceDelay('mars', 5)).toBeGreaterThanOrEqual(3);
     expect(missionAdviceDelay('mars', 5)).toBeLessThanOrEqual(22);
     expect(earthAdvice('mars', 2, event('dustStorm'))).toContain('arrived');
-    expect(earthAdvice('moon', 2)).toContain('1 minute');
+    expect(earthAdvice('moon', 2)).toContain('1.3 seconds one-way');
   });
 
   it('shows the next forecast before a turn and rolls another after it', () => {
@@ -68,6 +68,8 @@ describe('outpost engine', () => {
     expect(seedFromSearch('?seed=bad')).toBeUndefined();
     expect(seedFromSearch('?seed=42&demo=1')).toBe(DEMO_SEED);
     expect(missionCode(42)).toBe('SOL-0000016');
+    const mission = createMission('moon', 42);
+    expect(advanceTurn(mission, { lifeSupport: 5, shielding: 2, greenhouse: 2, science: 1 }).state.missionSeed).toBe(42);
   });
 
   it('can complete a 30-sol mission with a planned day and night budget', () => {
