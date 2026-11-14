@@ -1,5 +1,5 @@
 {
-  "fetchedAt": "2026-11-14T01:27:02.515Z",
+  "fetchedAt": "2026-11-14T09:14:07.841Z",
   "sourceUrls": [
     "https://ccmc.gsfc.nasa.gov/DONKI-API/get/FLR?startDate=2026-10-31&endDate=2026-11-14",
     "https://ccmc.gsfc.nasa.gov/DONKI-API/get/CME?startDate=2026-10-31&endDate=2026-11-14",
@@ -8,15 +8,15 @@
     "https://osdr.nasa.gov/osdr/data/search?term=space%20biology&from=0&size=10"
   ],
   "weather": {
-    "severity": 3,
-    "events": 43,
+    "severity": 2,
+    "events": 44,
     "eventClass": "FLR · M3.5",
     "eventDate": "2026-11-05",
     "eventId": "2026-11-05T18:21:00-FLR-001"
   },
   "radiation": {
-    "doseRateUgPerHour": 5.85745974242676,
-    "readingDate": "2022-04-02"
+    "doseRateUgPerHour": 5.857459742426761,
+    "readingDate": "2022-04-01 to 2022-04-02"
   },
   "science": {
     "title": "Quantifying Cancellous Bone Structural Changes in Microgravity: Axial Skeleton Results from the RR-1 Mission",
