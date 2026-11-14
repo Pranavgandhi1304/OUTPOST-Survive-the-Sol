@@ -38,7 +38,14 @@ npx playwright install chromium chromium-headless-shell
 
 ## Deploy
 
-Run `npm run build`, then deploy the contents of `dist/` to any static host (GitHub Pages, Netlify, Cloudflare Pages, or similar). No server configuration is needed. For GitHub Pages under a project path, set Vite's `base` option before building.
+### GitHub Pages (included)
+
+1. Push this repository to GitHub.
+2. In **Settings → Pages**, set **Source** to **GitHub Actions**.
+3. Push to `main` or `master`, or run **Deploy OUTPOST to GitHub Pages** from the Actions tab.
+4. The workflow installs browsers, runs `npm run check`, then deploys `dist/`. It automatically uses the repository path as Vite's base URL.
+
+For any other static host, run `npm run build` and deploy the contents of `dist/`. No server configuration is needed.
 
 ## Design notes
 
