@@ -12,10 +12,11 @@
     "test:e2e": "playwright test",
     "balance": "tsx scripts/balance.ts",
     "verify:nasa": "tsx scripts/verify-nasa.ts",
+    "test:pages": "tsx scripts/verify-pages-build.ts",
     "fetch:nasa-snapshot": "tsx scripts/fetch-nasa-snapshot.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
-    "check": "npm run typecheck && npm run lint && npm run test && npm run balance && npm run test:e2e && npm run build"
+    "check": "npm run typecheck && npm run lint && npm run test && npm run balance && npm run test:pages && npm run test:e2e && npm run build"
   },
   "devDependencies": {
     "@playwright/test": "^1.51.1",

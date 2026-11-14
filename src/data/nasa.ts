@@ -6,6 +6,7 @@ export type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promis
 const CACHE_PREFIX = 'outpost:nasa:';
 const CACHE_MS = 30 * 60 * 1000;
 const dateOnly = (date: Date): string => date.toISOString().slice(0, 10);
+export const snapshotUrl = (): string => `${import.meta.env.BASE_URL}data/nasa-snapshot.json`;
 
 const cachedJson = async <T>(key: string, url: string, fetcher: FetchLike, timeoutMs = 6_000): Promise<T> => {
   const storage = typeof sessionStorage === 'undefined' ? undefined : sessionStorage;
@@ -116,7 +117,7 @@ export const loadNasaData = async (fetcher: FetchLike = fetch): Promise<NasaData
   const fallback: NasaDataBundle = { weather: archivedWeather, radiation: archivedRadiation, science: archivedScience };
   let snapshotData: NasaDataBundle | undefined;
   try {
-    const response = await fetcher('/data/nasa-snapshot.json');
+    const response = await fetcher(snapshotUrl());
     if (response.ok) {
       const snapshot = await response.json() as unknown;
       if (isSnapshot(snapshot)) snapshotData = dataFromSnapshot(snapshot, fallback);
