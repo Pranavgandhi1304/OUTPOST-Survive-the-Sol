@@ -5,7 +5,7 @@
 - **NASA CCMC DONKI** (FLR, CME, GST): shows the strongest verified event in a recent 14-day window. Flare class maps A/B/C to level 1, M to level 2, and X to level 3; CME speed is used when it is the strongest event. That event sets Today-mode storm difficulty. Browser data is `LIVE`; otherwise the verified, dated snapshot is used.
 - **NASA OSDR RadLab**: queries ISS DosTel absorbed-dose-rate data from 2022-04-01T23:00 through 2022-04-02T01:05. Its real mean in µGy/h is stored in the dated snapshot, shown as `ISS reading from <date>`, and converted into the gameplay multiplier using the same units.
 - **NASA OSDR Search**: provides the linked Real NASA Science card at mission end. Browser data is `LIVE`; otherwise the dated snapshot card is used.
-- If a live request and its matching snapshot entry are both unavailable or invalid, the card is omitted. The project ships no hand-written archived NASA records.
+- If a live request and its matching snapshot entry are both unavailable or invalid, the card is omitted. The project ships no hand-written NASA records.
 
 ## Replayable gameplay
 

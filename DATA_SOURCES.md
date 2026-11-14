@@ -1,6 +1,6 @@
 # Data Sources and References
 
-NASA API-derived cards are labelled `LIVE` only after a successful browser request. If that request is unavailable, the game uses the matching value from the shipped, dated NASA snapshot. A card is hidden when neither source provides verified data; there are no hand-written archived weather, radiation, or science records.
+NASA API-derived cards are labelled `LIVE` only after a successful browser request. If that request is unavailable, the game uses the matching value from the shipped, dated NASA snapshot. A card is hidden when neither source provides verified data; there are no hand-written weather, radiation, or science records.
 
 | Resource | Endpoint or source | Drives | Status in build |
 | --- | --- | --- | --- |

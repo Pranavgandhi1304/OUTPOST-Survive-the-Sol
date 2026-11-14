@@ -3,7 +3,7 @@
 ## Architecture
 
 - `src/engine`: a pure seeded turn simulator: power generation, allocation, events, meters, battery, effects, failure and replay data.
-- `src/data`: NASA API clients, small local cache, data status labeling, and curated archived fallback records.
+- `src/data`: NASA API clients, small local cache, data status labeling, and the shipped snapshot fallback.
 - `src/content`: child-friendly mission copy, tooltips, and NASA science-card content.
 - `src/ui`: accessible React screens and a compact SVG dashboard; UI dispatches intent to the engine.
 - `tests`: Vitest engine/data/balance coverage plus Playwright desktop/mobile/axe journeys.
@@ -18,6 +18,6 @@ The player wins by keeping their crew and outpost stable through sol 30. Failure
 
 1. Bootstrap Vite/TypeScript tooling and test harnesses.
 2. Build and test the pure simulation plus balance runner.
-3. Build and test NASA data layer and fallback behavior.
+3. Build and test NASA data layer and snapshot behavior.
 4. Build accessible game UI and content.
 5. Add Playwright and axe journeys, documentation, and final verification.
