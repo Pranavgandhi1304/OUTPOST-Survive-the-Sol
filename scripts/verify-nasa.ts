@@ -32,6 +32,16 @@ const report = (name: string, value: unknown): JsonRecord[] => {
   return rows;
 };
 
+const reportOsdr = (value: unknown): JsonRecord[] => {
+  const hits = typeof value === 'object' && value !== null ? (value as { hits?: { hits?: unknown } }).hits?.hits : undefined;
+  if (!Array.isArray(hits)) throw new Error('OSDR parsing assumption failed: expected hits.hits array. Update src/data/nasa.ts before using this response.');
+  const rows = hits.map((hit) => (typeof hit === 'object' && hit !== null ? (hit as { _source?: unknown })._source : undefined)).filter((source): source is JsonRecord => typeof source === 'object' && source !== null);
+  const keys = rows[0] ? Object.keys(rows[0]).sort().join(', ') : '(empty valid hits array)';
+  console.log(`OSDR space-biology search: hits.hits with ${rows.length} record(s)`);
+  console.log(`OSDR space-biology sample keys: ${keys}`);
+  return rows;
+};
+
 const assertDonki = (name: string, rows: JsonRecord[]): void => {
   if (rows.length > 0 && !rows.some((row) => ['flrID', 'activityID', 'gstID'].some((key) => key in row))) throw new Error(`${name} parsing assumption failed: a non-empty DONKI record did not expose a known identifier.`);
 };
@@ -45,8 +55,8 @@ const main = async (): Promise<void> => {
   }
   const radLab = report('RadLab ISS DosTel', await requestJson('RadLab ISS DosTel', 'https://visualization.osdr.nasa.gov/radlab/api/?spacecraft=ISS&instrument=DosTel&absorbed_dose_rate&format=json'));
   if (radLab.length > 0 && !radLab.some((row) => typeof row.absorbed_dose_rate === 'number')) throw new Error('RadLab parsing assumption failed: no numeric absorbed_dose_rate field was found.');
-  const osdr = report('OSDR spaceflight search', await requestJson('OSDR spaceflight search', 'https://osdr.nasa.gov/osdr/data/search?term=spaceflight&from=0&size=1'));
-  if (osdr.length > 0 && !osdr.some((row) => typeof row.title === 'string' && (typeof row.Accession === 'string' || typeof row.accession === 'string'))) throw new Error('OSDR parsing assumption failed: expected title plus Accession/accession.');
+  const osdr = reportOsdr(await requestJson('OSDR space-biology search', 'https://osdr.nasa.gov/osdr/data/search?term=space%20biology&from=0&size=10'));
+  if (osdr.length > 0 && !osdr.some((row) => typeof row['Study Title'] === 'string' && typeof row.Accession === 'string')) throw new Error('OSDR parsing assumption failed: expected Study Title plus Accession.');
   console.log('NASA response shapes match the browser data-layer assumptions.');
 };
 

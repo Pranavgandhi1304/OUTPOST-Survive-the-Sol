@@ -8,7 +8,7 @@ describe('NASA data layer', () => {
     const fetcher = async (url: RequestInfo | URL): Promise<Response> => {
       const text = String(url);
       if (text.includes('radlab')) return jsonResponse([{ absorbed_dose_rate: 0.8 }]);
-      if (text.includes('osdr/data/search')) return jsonResponse([{ title: 'Space plant study', Accession: 'OSD-1' }]);
+      if (text.includes('osdr/data/search')) return jsonResponse({ hits: { hits: [{ _source: { 'Study Title': 'Space biology plant study', Accession: 'OSD-1', 'Space Program': 'NASA' } }] } });
       return jsonResponse([{ activityID: 'x' }]);
     };
     expect((await getSpaceWeather(fetcher, new Date('2026-01-02'))).badge).toBe('LIVE');

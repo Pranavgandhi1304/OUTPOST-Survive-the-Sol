@@ -32,6 +32,20 @@ const asArray = (value: unknown): Record<string, unknown>[] => {
   throw new Error('Unexpected NASA response shape');
 };
 
+const asOsdrStudies = (value: unknown): Record<string, unknown>[] => {
+  if (typeof value !== 'object' || value === null) throw new Error('Unexpected OSDR response shape');
+  const hits = (value as { hits?: { hits?: unknown } }).hits?.hits;
+  if (!Array.isArray(hits)) throw new Error('Unexpected OSDR hits response shape');
+  return hits.map((hit) => (typeof hit === 'object' && hit !== null ? (hit as { _source?: unknown })._source : undefined)).filter((source): source is Record<string, unknown> => typeof source === 'object' && source !== null);
+};
+
+const isSpaceflightStudy = (study: Record<string, unknown>): boolean => {
+  const title = typeof study['Study Title'] === 'string' ? study['Study Title'] : '';
+  const program = typeof study['Space Program'] === 'string' ? study['Space Program'] : '';
+  const flight = typeof study['Flight Program'] === 'string' ? study['Flight Program'] : '';
+  return /space|microgravity|\biss\b|flight/i.test(`${title} ${program} ${flight}`);
+};
+
 const eventDate = (record: Record<string, unknown>, fallback: string): string => {
   const raw = [record.beginTime, record.startTime, record.eventTime, record.time21_5].find((value): value is string => typeof value === 'string');
   return raw?.slice(0, 10) || fallback;
@@ -69,11 +83,11 @@ export const getRadiation = async (fetcher: FetchLike = fetch): Promise<Radiatio
 
 export const getScienceCard = async (fetcher: FetchLike = fetch): Promise<ScienceCard> => {
   try {
-    const response = await cachedJson<unknown>('osdr-spaceflight', 'https://osdr.nasa.gov/osdr/data/search?term=spaceflight&from=0&size=1', fetcher);
-    const rows = asArray(response);
-    const first = rows[0];
-    const title = typeof first.title === 'string' ? first.title : undefined;
-    const id = typeof first.Accession === 'string' ? first.Accession : typeof first.accession === 'string' ? first.accession : undefined;
+    const response = await cachedJson<unknown>('osdr-space-biology', 'https://osdr.nasa.gov/osdr/data/search?term=space%20biology&from=0&size=10', fetcher);
+    const first = asOsdrStudies(response).find(isSpaceflightStudy);
+    if (!first) throw new Error('No spaceflight OSDR study');
+    const title = typeof first['Study Title'] === 'string' ? first['Study Title'] : undefined;
+    const id = typeof first.Accession === 'string' ? first.Accession : undefined;
     if (!title || !id) throw new Error('No usable OSDR study');
     return { title, description: 'A current NASA space-biology study found through OSDR.', studyId: id, badge: 'LIVE', url: `https://osdr.nasa.gov/bio/repo/data/studies/${id}` };
   } catch {
