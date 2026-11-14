@@ -18,6 +18,17 @@ const scanAxe = async (page: import('@playwright/test').Page): Promise<void> => 
   expect(violations).toEqual([]);
 };
 
+const completeTutorial = async (page: import('@playwright/test').Page): Promise<void> => {
+  await expect(page.getByRole('heading', { name: /one battery/i })).toBeVisible();
+  await page.getByRole('button', { name: /next step/i }).click();
+  await page.getByRole('button', { name: /next step/i }).click();
+  await page.getByRole('button', { name: /start training/i }).click();
+};
+
+const resetTutorial = async (page: import('@playwright/test').Page): Promise<void> => {
+  await page.addInitScript(() => localStorage.removeItem('outpost:tutorial-seen'));
+};
+
 const runMoonMission = async (page: import('@playwright/test').Page): Promise<void> => {
   for (let sol = 0; sol < 30; sol += 1) {
     if (sol === 15) {
@@ -43,8 +54,10 @@ test('plays a complete desktop mission with no console errors', async ({ page })
   const errors: string[] = [];
   page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
   await silenceNasa(page);
+  await resetTutorial(page);
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/');
+  await completeTutorial(page);
   await expect(page.getByRole('heading', { level: 1, name: /outpost survive the sol/i })).toBeVisible();
   await finishMoonMission(page);
   expect(errors).toEqual([]);
@@ -52,15 +65,19 @@ test('plays a complete desktop mission with no console errors', async ({ page })
 
 test('plays a complete mission at 375px mobile width', async ({ page }) => {
   await silenceNasa(page);
+  await resetTutorial(page);
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto('/');
+  await completeTutorial(page);
   await finishMoonMission(page);
   await expect(page.getByText(/real nasa science/i)).toBeVisible();
 });
 
 test('shows Earth advice arriving late on a Mars mission', async ({ page }) => {
   await silenceNasa(page);
+  await resetTutorial(page);
   await page.goto('/');
+  await completeTutorial(page);
   await page.getByRole('button', { name: /mars jezero crater/i }).click();
   await page.getByRole('button', { name: /start the 30-sol mission/i }).click();
   await expect(page.getByText(/earth’s first advice is still in transit/i)).toBeVisible();
@@ -68,10 +85,16 @@ test('shows Earth advice arriving late on a Mars mission', async ({ page }) => {
   await expect(page.getByText(/arrived .* minutes late/i)).toBeVisible();
 });
 
-test('has no axe violations on landing, mission, and debrief screens', async ({ page }) => {
+test('has no axe violations on tutorial, classroom, landing, mission, and debrief screens', async ({ page }) => {
   await silenceNasa(page);
+  await resetTutorial(page);
   await page.goto('/');
   await scanAxe(page);
+  await completeTutorial(page);
+  await scanAxe(page);
+  await page.getByRole('button', { name: /classroom \/ parent mode/i }).click();
+  await scanAxe(page);
+  await page.getByRole('button', { name: /back to mission select/i }).click();
   await page.getByRole('button', { name: /start the 30-sol mission/i }).click();
   await scanAxe(page);
   await runMoonMission(page);
