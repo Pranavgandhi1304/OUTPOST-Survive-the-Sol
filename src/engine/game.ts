@@ -2,7 +2,7 @@ import { nextRandom } from './random';
 import type { Allocation, EventKind, GameEvent, MissionState, Site, TurnResult } from './types';
 
 export const TURN_COUNT = 30;
-export const BATTERY_CAPACITY = 24;
+export const BATTERY_CAPACITY = 30;
 export const EMPTY_ALLOCATION: Allocation = { lifeSupport: 0, shielding: 0, greenhouse: 0, science: 0 };
 
 export const ALLOCATION_OPTIONS = [
@@ -29,7 +29,7 @@ const eventFor = (site: Site, seed: number, severityBoost = 0): [number, GameEve
 
 export const solarForTurn = (site: Site, turn: number, event: GameEvent): number => {
   const lunarDay = (turn - 1) % 30 < 15;
-  const base = site === 'moon' ? (lunarDay ? 17 : 4) : 13 + ((turn * 7) % 4);
+  const base = site === 'moon' ? (lunarDay ? 17 : 9) : 13 + ((turn * 7) % 4);
   const dustLoss = event.kind === 'dustStorm' ? event.severity * 3 : 0;
   const faultLoss = event.kind === 'equipmentFault' ? event.severity : 0;
   return Math.max(1, base - dustLoss - faultLoss);
@@ -94,8 +94,8 @@ export const advanceTurn = (state: MissionState, requested: Allocation, forcedEv
   const batteryDraw = Math.max(0, usedPower - solarPower);
   const battery = clamp(state.battery - batteryDraw + surplus, 0, BATTERY_CAPACITY);
   const lifeGap = Math.max(0, 5 - allocation.lifeSupport);
-  const stormDose = event.kind === 'solarStorm' ? event.severity * 15 * state.calibration.doseMultiplier * (1 - state.shielding / 100) : 0;
-  const newShielding = clamp(state.shielding - 2 + allocation.shielding * 4);
+  const stormDose = event.kind === 'solarStorm' ? event.severity * (4 + 18 * (1 - state.shielding / 100)) * state.calibration.doseMultiplier : 0;
+  const newShielding = clamp(state.shielding - 5 + allocation.shielding * 3);
   const food = clamp(state.food - 2 + state.greenhouseYield, 0, 100);
   const healthHit = lifeGap * 3 + (food < 10 ? 5 : 0) + (stormDose > 9 ? 3 : 0);
   const next: MissionState = {
