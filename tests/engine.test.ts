@@ -54,6 +54,14 @@ describe('outpost engine', () => {
     expect(earthAdvice('moon', 2)).toContain('1 minute');
   });
 
+  it('shows the next forecast before a turn and rolls another after it', () => {
+    const state = createMission('mars', 99);
+    const forecast = state.nextEvent;
+    const after = advanceTurn(state, { lifeSupport: 5, shielding: 3, greenhouse: 2, science: 1 }).state;
+    expect(after.event).toEqual(forecast);
+    expect(after.nextEvent).not.toEqual(forecast);
+  });
+
   it('can complete a 30-sol mission with a planned day and night budget', () => {
     let state = createMission('moon', 101);
     for (let turn = 1; turn <= 30; turn += 1) {

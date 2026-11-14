@@ -2,7 +2,7 @@ import { nextRandom } from './random';
 import type { Allocation, EventKind, GameEvent, MissionState, Site, TurnResult } from './types';
 
 export const TURN_COUNT = 30;
-export const BATTERY_CAPACITY = 30;
+export const BATTERY_CAPACITY = 44;
 export const EMPTY_ALLOCATION: Allocation = { lifeSupport: 0, shielding: 0, greenhouse: 0, science: 0 };
 
 export const ALLOCATION_OPTIONS = [
@@ -29,7 +29,8 @@ const eventFor = (site: Site, seed: number, severityBoost = 0): [number, GameEve
 
 export const solarForTurn = (site: Site, turn: number, event: GameEvent): number => {
   const lunarDay = (turn - 1) % 30 < 15;
-  const base = site === 'moon' ? (lunarDay ? 17 : 9) : 13 + ((turn * 7) % 4);
+  // Lunar night is deliberately lean: daytime surplus must be stored first.
+  const base = site === 'moon' ? (lunarDay ? 17 : 3) : 9 + ((turn * 7) % 4);
   const dustLoss = event.kind === 'dustStorm' ? event.severity * 3 : 0;
   const faultLoss = event.kind === 'equipmentFault' ? event.severity : 0;
   return Math.max(1, base - dustLoss - faultLoss);
@@ -53,24 +54,28 @@ export const normalizeAllocation = (allocation: Allocation, budget: number): All
   };
 };
 
-export const createMission = (site: Site, seed = 2026, calibration = { stormSeverity: 0, doseMultiplier: 1 }): MissionState => ({
-  site,
-  turn: 1,
-  power: site === 'moon' ? 17 : 14,
-  air: 76,
-  shielding: 58,
-  health: 100,
-  radiationDose: 0,
-  food: 34,
-  battery: 12,
-  science: 0,
-  greenhouseYield: 0,
-  seed,
-  calibration,
-  event: quietEvent(),
-  replay: [],
-  outcome: 'playing',
-});
+export const createMission = (site: Site, seed = 2026, calibration = { stormSeverity: 0, doseMultiplier: 1 }): MissionState => {
+  const [nextSeed, nextEvent] = eventFor(site, seed, calibration.stormSeverity);
+  return {
+    site,
+    turn: 1,
+    power: site === 'moon' ? 17 : 14,
+    air: 76,
+    shielding: 58,
+    health: 100,
+    radiationDose: 0,
+    food: 34,
+    battery: 12,
+    science: 0,
+    greenhouseYield: 0,
+    seed: nextSeed,
+    calibration,
+    event: quietEvent(),
+    nextEvent,
+    replay: [],
+    outcome: 'playing',
+  };
+};
 
 const failure = (state: MissionState): string | undefined => {
   if (state.air <= 0) return 'The crew ran out of safe air.';
@@ -84,20 +89,23 @@ const failure = (state: MissionState): string | undefined => {
 export const advanceTurn = (state: MissionState, requested: Allocation, forcedEvent?: GameEvent): TurnResult => {
   if (state.outcome !== 'playing') return { state, availablePower: 0, solarPower: 0, usedPower: 0, event: state.event };
 
-  const [nextSeed, rolledEvent] = eventFor(state.site, state.seed, state.calibration.stormSeverity);
-  const event = forcedEvent ?? rolledEvent;
+  // Consume the event shown before allocation, then store another forecast.
+  const event = forcedEvent ?? state.nextEvent;
+  const [nextSeed, nextEvent] = eventFor(state.site, state.seed, state.calibration.stormSeverity);
   const solarPower = solarForTurn(state.site, state.turn, event);
   const availablePower = solarPower + state.battery;
   const allocation = normalizeAllocation(requested, availablePower);
   const usedPower = sum(allocation);
+  const powerShortfall = Math.max(0, sum(requested) - availablePower);
   const surplus = Math.max(0, solarPower - usedPower);
   const batteryDraw = Math.max(0, usedPower - solarPower);
   const battery = clamp(state.battery - batteryDraw + surplus, 0, BATTERY_CAPACITY);
   const lifeGap = Math.max(0, 5 - allocation.lifeSupport);
-  const stormDose = event.kind === 'solarStorm' ? event.severity * (4 + 18 * (1 - state.shielding / 100)) * state.calibration.doseMultiplier : 0;
   const newShielding = clamp(state.shielding - 5 + allocation.shielding * 3);
+  // A forecast lets the crew raise shielding before incoming particles arrive.
+  const stormDose = event.kind === 'solarStorm' ? event.severity * (4 + 18 * (1 - newShielding / 100)) * state.calibration.doseMultiplier : 0;
   const food = clamp(state.food - 2 + state.greenhouseYield, 0, 100);
-  const healthHit = lifeGap * 3 + (food < 10 ? 5 : 0) + (stormDose > 9 ? 3 : 0);
+  const healthHit = lifeGap * 3 + (food < 10 ? 5 : 0) + (stormDose > 9 ? 3 : 0) + powerShortfall * 2;
   const next: MissionState = {
     ...state,
     turn: state.turn + 1,
@@ -112,6 +120,7 @@ export const advanceTurn = (state: MissionState, requested: Allocation, forcedEv
     greenhouseYield: allocation.greenhouse * 0.85,
     seed: nextSeed,
     event,
+    nextEvent,
     replay: [],
   };
   const failureReason = failure(next);

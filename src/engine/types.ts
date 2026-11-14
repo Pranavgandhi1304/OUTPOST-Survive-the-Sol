@@ -41,6 +41,8 @@ export interface MissionState {
   seed: number;
   calibration: { stormSeverity: number; doseMultiplier: number };
   event: GameEvent;
+  /** Forecast for the sol the player is about to run. */
+  nextEvent: GameEvent;
   replay: ReplayEntry[];
   outcome: 'playing' | 'won' | 'failed';
   failureReason?: string;
