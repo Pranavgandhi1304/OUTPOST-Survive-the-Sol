@@ -5,9 +5,13 @@ interface AxeViolation { id: string; impact: string | null; nodes: unknown[] }
 interface AxeWindow extends Window { axe: { run: () => Promise<{ violations: AxeViolation[] }> } }
 
 const silenceNasa = async (page: import('@playwright/test').Page): Promise<void> => {
-  await page.route(/(api\.nasa\.gov|osdr\.nasa\.gov|visualization\.osdr\.nasa\.gov)/, (route) => {
+  await page.route(/(ccmc\.gsfc\.nasa\.gov|osdr\.nasa\.gov|visualization\.osdr\.nasa\.gov)/, (route) => {
     const url = route.request().url();
-    const body = url.includes('radlab') ? [{ absorbed_dose_rate: 0.42 }] : url.includes('data/search') ? [{ title: 'Space plant study', Accession: 'OSD-1' }] : [{ activityID: 'event-1' }];
+    const body = url.includes('radlab')
+      ? { columns: ['timestamp', 'absorbed_dose_rate'], data: [['2022-04-02T00:00', 5.2], ['2022-04-02T00:05', 5.8]] }
+      : url.includes('data/search')
+        ? { hits: { hits: [{ _source: { 'Study Title': 'Space plant study', Accession: 'OSD-1', 'Space Program': 'NASA' } }] } }
+        : [{ flrID: 'event-1', classType: 'M1.0', beginTime: '2022-04-02T00:00Z' }];
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
   });
 };
@@ -56,7 +60,7 @@ test('plays a complete desktop mission with no console errors', async ({ page })
   await silenceNasa(page);
   await resetTutorial(page);
   await page.setViewportSize({ width: 1280, height: 900 });
-  await page.goto('/');
+  await page.goto('/?demo=1');
   await completeTutorial(page);
   await expect(page.getByRole('heading', { level: 1, name: /outpost survive the sol/i })).toBeVisible();
   await finishMoonMission(page);
@@ -67,7 +71,7 @@ test('plays a complete mission at 375px mobile width', async ({ page }) => {
   await silenceNasa(page);
   await resetTutorial(page);
   await page.setViewportSize({ width: 375, height: 812 });
-  await page.goto('/');
+  await page.goto('/?demo=1');
   await completeTutorial(page);
   await finishMoonMission(page);
   await expect(page.locator('.science-card').getByText(/real nasa science/i)).toBeVisible();
@@ -76,10 +80,12 @@ test('plays a complete mission at 375px mobile width', async ({ page }) => {
 test('shows Earth advice arriving late on a Mars mission', async ({ page }) => {
   await silenceNasa(page);
   await resetTutorial(page);
-  await page.goto('/');
+  await page.goto('/?demo=1');
   await completeTutorial(page);
   await page.getByRole('button', { name: /mars jezero crater/i }).click();
   await page.getByRole('button', { name: /start the 30-sol mission/i }).click();
+  await expect(page.getByText(/forecast/i)).toBeVisible();
+  await expect(page.getByRole('heading', { name: /upcoming sol/i })).toBeVisible();
   await expect(page.getByText(/earth’s first advice is still in transit/i)).toBeVisible();
   await page.getByRole('button', { name: /run sol 1/i }).click();
   await expect(page.getByText(/arrived .* minutes late/i)).toBeVisible();
@@ -88,7 +94,7 @@ test('shows Earth advice arriving late on a Mars mission', async ({ page }) => {
 test('has no axe violations on tutorial, classroom, landing, mission, and debrief screens', async ({ page }) => {
   await silenceNasa(page);
   await resetTutorial(page);
-  await page.goto('/');
+  await page.goto('/?demo=1');
   await scanAxe(page);
   await completeTutorial(page);
   await scanAxe(page);

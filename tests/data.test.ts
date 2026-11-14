@@ -12,7 +12,7 @@ describe('NASA data layer', () => {
   it('shows LIVE labels for valid documented-shaped responses', async () => {
     const fetcher = async (url: RequestInfo | URL): Promise<Response> => {
       const text = String(url);
-      if (text.includes('radlab')) return jsonResponse({ columns: ['timestamp', 'absorbed_dose_rate'], index: [], data: [['2026-01-01T00:00', 0.8]] });
+      if (text.includes('radlab')) return jsonResponse({ columns: ['timestamp', 'absorbed_dose_rate'], index: [], data: [['2022-04-02T00:00', 5.2], ['2022-04-02T00:05', 5.8]] });
       if (text.includes('osdr/data/search')) return jsonResponse({ hits: { hits: [{ _source: { 'Study Title': 'Space biology plant study', Accession: 'OSD-1', 'Space Program': 'NASA' } }] } });
       return jsonResponse([{ activityID: 'x' }]);
     };
@@ -20,7 +20,7 @@ describe('NASA data layer', () => {
     const radiation = await getRadiation(fetcher);
     expect(radiation!.badge).toBe('LIVE');
     expect(radiation!.unit).toBe('µGy/h');
-    expect(radiation!.readingDate).toBe('2022-04-01 to 2022-04-02');
+    expect(radiation!.readingDate).toBe('2022-04-02');
     expect((await getScienceCard(fetcher))!.badge).toBe('LIVE');
   });
 

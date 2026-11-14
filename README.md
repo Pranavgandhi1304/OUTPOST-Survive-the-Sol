@@ -46,4 +46,4 @@ For any other static host, run `npm run build` and deploy the contents of `dist/
 - The dashboard deliberately has only three main meters: POWER, AIR, and SHIELDING.
 - Food, crew health, dose, battery, and science are support values, so the player learns the central power trade-off without a crowded screen.
 - A Mission Replay explains the final turn, event, and allocation split after any failure.
-- NASA-derived cards always show `LIVE` or `ARCHIVED (date)`. See [DATA_SOURCES.md](DATA_SOURCES.md).
+- NASA-derived cards show `LIVE` or the dated shipped-snapshot label; cards without verified data are hidden. See [DATA_SOURCES.md](DATA_SOURCES.md).

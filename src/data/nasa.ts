@@ -10,12 +10,19 @@ export const ISS_REFERENCE_DOSE_RATE_UG_PER_HOUR = 5;
 const dateOnly = (date: Date): string => date.toISOString().slice(0, 10);
 export const snapshotUrl = (): string => `${import.meta.env.BASE_URL}data/nasa-snapshot.json`;
 
+const sessionStore = (): Storage | undefined => {
+  try { return typeof sessionStorage === 'undefined' ? undefined : sessionStorage; } catch { return undefined; }
+};
+
 const cachedJson = async <T>(key: string, url: string, fetcher: FetchLike, timeoutMs = 6_000): Promise<T> => {
-  const storage = typeof sessionStorage === 'undefined' ? undefined : sessionStorage;
-  const cached = storage?.getItem(CACHE_PREFIX + key);
+  const storage = sessionStore();
+  let cached: string | null = null;
+  try { cached = storage?.getItem(CACHE_PREFIX + key) ?? null; } catch { /* private browsing can block storage */ }
   if (cached) {
-    const parsed = JSON.parse(cached) as { savedAt: number; data: T };
-    if (Date.now() - parsed.savedAt < CACHE_MS) return parsed.data;
+    try {
+      const parsed = JSON.parse(cached) as { savedAt: number; data: T };
+      if (Date.now() - parsed.savedAt < CACHE_MS) return parsed.data;
+    } catch { /* ignore a corrupt cache entry */ }
   }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -23,7 +30,7 @@ const cachedJson = async <T>(key: string, url: string, fetcher: FetchLike, timeo
     const response = await fetcher(url, { signal: controller.signal });
     if (!response.ok) throw new Error(`NASA request failed (${response.status})`);
     const data = (await response.json()) as T;
-    storage?.setItem(CACHE_PREFIX + key, JSON.stringify({ savedAt: Date.now(), data }));
+    try { storage?.setItem(CACHE_PREFIX + key, JSON.stringify({ savedAt: Date.now(), data })); } catch { /* cache is optional */ }
     return data;
   } finally {
     clearTimeout(timer);
@@ -53,6 +60,13 @@ const asRadLabRows = (value: unknown): Record<string, unknown>[] => {
     }
   }
   return asArray(value);
+};
+
+const radLabReadingDate = (rows: Record<string, unknown>[]): string => {
+  const dates = [...new Set(rows.map((row) => row.timestamp).filter((value): value is string => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value)).map((value) => value.slice(0, 10)))].sort();
+  if (dates.length === 1) return dates[0];
+  if (dates.length > 1) return `${dates[0]} to ${dates.at(-1)}`;
+  return `${RADLAB_START.slice(0, 10)} to ${RADLAB_END.slice(0, 10)}`;
 };
 
 const isSpaceflightStudy = (study: Record<string, unknown>): boolean => {
@@ -117,7 +131,7 @@ export const getRadiation = async (fetcher: FetchLike = fetch): Promise<Radiatio
     const rows = asRadLabRows(response);
     const rates = rows.map((row) => Number(row.absorbed_dose_rate)).filter((rate) => Number.isFinite(rate) && rate > 0);
     if (rates.length === 0) throw new Error('No dose rates');
-    return { doseRateUgPerHour: rates.reduce((total, rate) => total + rate, 0) / rates.length, readingDate: '2022-04-01 to 2022-04-02', unit: 'µGy/h', badge: 'LIVE', source: 'NASA OSDR RadLab ISS absorbed dose-rate readings (µGy/h).' };
+    return { doseRateUgPerHour: rates.reduce((total, rate) => total + rate, 0) / rates.length, readingDate: radLabReadingDate(rows), unit: 'µGy/h', badge: 'LIVE', source: 'NASA OSDR RadLab ISS absorbed dose-rate readings (µGy/h).' };
   } catch { return undefined; }
 };
 
