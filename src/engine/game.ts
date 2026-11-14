@@ -77,6 +77,7 @@ const failure = (state: MissionState): string | undefined => {
   if (state.health <= 0) return 'The crew was too sick to continue.';
   if (state.radiationDose >= 100) return 'The crew received too much radiation.';
   if (state.food <= 0) return 'The greenhouse could not keep the crew fed.';
+  if (state.turn > TURN_COUNT && state.science < 24) return 'The crew survived, but the mission did not collect enough science.';
   return undefined;
 };
 
@@ -93,7 +94,7 @@ export const advanceTurn = (state: MissionState, requested: Allocation, forcedEv
   const batteryDraw = Math.max(0, usedPower - solarPower);
   const battery = clamp(state.battery - batteryDraw + surplus, 0, BATTERY_CAPACITY);
   const lifeGap = Math.max(0, 5 - allocation.lifeSupport);
-  const stormDose = event.kind === 'solarStorm' ? event.severity * 9 * state.calibration.doseMultiplier * (1 - state.shielding / 100) : 0;
+  const stormDose = event.kind === 'solarStorm' ? event.severity * 15 * state.calibration.doseMultiplier * (1 - state.shielding / 100) : 0;
   const newShielding = clamp(state.shielding - 2 + allocation.shielding * 4);
   const food = clamp(state.food - 2 + state.greenhouseYield, 0, 100);
   const healthHit = lifeGap * 3 + (food < 10 ? 5 : 0) + (stormDose > 9 ? 3 : 0);
