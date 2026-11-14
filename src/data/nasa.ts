@@ -65,6 +65,22 @@ const eventDate = (record: Record<string, unknown>, fallback: string): string =>
   return raw?.slice(0, 10) || fallback;
 };
 
+const flareSeverity = (classType: string): number => ({ A: 1, B: 1, C: 1, M: 2, X: 3 })[classType.trim().charAt(0).toUpperCase()] ?? 1;
+const cmeSpeed = (record: Record<string, unknown>): number | undefined => {
+  const direct = Number(record.speed);
+  const analyses = Array.isArray(record.cmeAnalyses) ? record.cmeAnalyses : [];
+  const speeds = [direct, ...analyses.map((analysis) => typeof analysis === 'object' && analysis !== null ? Number((analysis as Record<string, unknown>).speed) : Number.NaN)]
+    .filter((speed) => Number.isFinite(speed) && speed > 0);
+  return speeds.length > 0 ? Math.max(...speeds) : undefined;
+};
+const cmeSeverity = (speed: number): number => (speed >= 1_500 ? 3 : speed >= 800 ? 2 : 1);
+
+interface WeatherCandidate {
+  severity: number;
+  eventClass: string;
+  record: Record<string, unknown>;
+}
+
 export const getSpaceWeather = async (fetcher: FetchLike = fetch, now = new Date()): Promise<SpaceWeather> => {
   try {
     const end = dateOnly(now);
@@ -74,11 +90,21 @@ export const getSpaceWeather = async (fetcher: FetchLike = fetch, now = new Date
     const grouped = [['FLR', asArray(flares)], ['CME', asArray(cmes)], ['GST', asArray(storms)]] as const;
     const count = grouped.reduce((total, [, records]) => total + records.length, 0);
     if (count === 0) throw new Error('No recent DONKI events');
-    const [kind, records] = grouped.find(([, entries]) => entries.length > 0)!;
-    const record = records[0];
-    const classification = typeof record.classType === 'string' ? ` · ${record.classType}` : '';
+    const candidates: WeatherCandidate[] = [
+      ...grouped[0][1].map((record) => {
+        const classType = typeof record.classType === 'string' ? record.classType : 'A';
+        return { severity: flareSeverity(classType), eventClass: `FLR · ${classType}`, record };
+      }),
+      ...grouped[1][1].map((record) => {
+        const speed = cmeSpeed(record);
+        return { severity: speed === undefined ? 1 : cmeSeverity(speed), eventClass: speed === undefined ? 'CME' : `CME · ${Math.round(speed)} km/s`, record };
+      }),
+      ...grouped[2][1].map((record) => ({ severity: 1, eventClass: 'GST', record })),
+    ];
+    const strongest = candidates.reduce((best, candidate) => candidate.severity > best.severity ? candidate : best);
+    const record = strongest.record;
     const eventId = ['flrID', 'activityID', 'gstID'].map((key) => record[key]).find((value): value is string => typeof value === 'string');
-    return { severity: Math.min(3, Math.max(1, Math.ceil(count / 3))), events: count, eventClass: `${kind}${classification}`, eventDate: eventDate(record, end), eventId, badge: 'LIVE', source: 'NASA CCMC DONKI FLR, CME, and GST events from the last 14 days.' };
+    return { severity: strongest.severity, events: count, eventClass: strongest.eventClass, eventDate: eventDate(record, end), eventId, badge: 'LIVE', source: 'NASA CCMC DONKI FLR, CME, and GST events from the last 14 days.' };
   } catch {
     return archivedWeather;
   }

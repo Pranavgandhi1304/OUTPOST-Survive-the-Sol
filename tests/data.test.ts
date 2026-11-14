@@ -19,6 +19,33 @@ describe('NASA data layer', () => {
     expect((await getScienceCard(fetcher)).badge).toBe('LIVE');
   });
 
+  it.each([
+    ['A1.0', 1],
+    ['B4.2', 1],
+    ['C9.9', 1],
+    ['M2.4', 2],
+    ['X1.1', 3],
+  ])('uses the strongest flare class %s for severity %i', async (classType, severity) => {
+    const fetcher = async (url: RequestInfo | URL): Promise<Response> => String(url).includes('/FLR?')
+      ? jsonResponse([{ flrID: 'flare-id', classType, beginTime: '2026-01-01T00:00Z' }])
+      : jsonResponse([]);
+    const weather = await getSpaceWeather(fetcher, new Date('2026-01-02T00:00Z'));
+    expect(weather.severity).toBe(severity);
+    expect(weather.eventClass).toBe(`FLR · ${classType}`);
+  });
+
+  it('uses CME speed only as a secondary strength signal', async () => {
+    const fetcher = async (url: RequestInfo | URL): Promise<Response> => {
+      if (String(url).includes('/FLR?')) return jsonResponse([{ flrID: 'c-flare', classType: 'C3.0', beginTime: '2026-01-01T00:00Z' }]);
+      if (String(url).includes('/CME?')) return jsonResponse([{ activityID: 'fast-cme', startTime: '2026-01-02T00:00Z', cmeAnalyses: [{ speed: 1_600 }] }]);
+      return jsonResponse([]);
+    };
+    const weather = await getSpaceWeather(fetcher, new Date('2026-01-03T00:00Z'));
+    expect(weather.severity).toBe(3);
+    expect(weather.eventClass).toBe('CME · 1600 km/s');
+    expect(weather.eventId).toBe('fast-cme');
+  });
+
   it('keeps realistic microgray-per-hour values inside the dose multiplier range', () => {
     const low = calibrationFromData({ weather: archivedWeather, science: archivedScience, radiation: { doseRateUgPerHour: 0.34, unit: 'µGy/h', badge: 'LIVE', source: 'test' } });
     const high = calibrationFromData({ weather: archivedWeather, science: archivedScience, radiation: { doseRateUgPerHour: 0.48, unit: 'µGy/h', badge: 'LIVE', source: 'test' } });
