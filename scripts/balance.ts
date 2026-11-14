@@ -12,11 +12,11 @@ const strategy = (name: StrategyName, state: MissionState): Allocation => {
   if (name === 'reactive') {
     const storm = state.nextEvent.kind === 'solarStorm';
     if (state.site === 'moon' && state.turn > 15) return storm
-      ? { lifeSupport: 5, shielding: 4, greenhouse: 0, science: 0 }
-      : { lifeSupport: 5, shielding: 0, greenhouse: 0, science: 0 };
+      ? { lifeSupport: 5, shielding: 1, greenhouse: 0, science: 0 }
+      : { lifeSupport: 4, shielding: 1, greenhouse: 0, science: 0 };
     if (state.site === 'moon') return storm
       ? { lifeSupport: 5, shielding: 5, greenhouse: 3, science: 2 }
-      : { lifeSupport: 5, shielding: 3, greenhouse: 3, science: 3 };
+      : { lifeSupport: 5, shielding: 3, greenhouse: 3, science: 2 };
     if (state.nextEvent.kind === 'equipmentFault' || state.nextEvent.kind === 'dustStorm') {
       const available = solarForTurn(state.site, state.turn, state.nextEvent) + state.battery;
       return available < 7
@@ -24,7 +24,7 @@ const strategy = (name: StrategyName, state: MissionState): Allocation => {
         : { lifeSupport: 5, shielding: 1, greenhouse: 1, science: 0 };
     }
     return storm
-      ? { lifeSupport: 5, shielding: 6, greenhouse: 0, science: 0 }
+      ? { lifeSupport: 5, shielding: state.nextEvent.severity === 3 ? 6 : 5, greenhouse: 0, science: 0 }
       : { lifeSupport: 5, shielding: 2, greenhouse: 2, science: 1 };
   }
   const [first, a] = nextRandom(state.seed ^ state.turn);
