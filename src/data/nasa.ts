@@ -33,15 +33,24 @@ const asArray = (value: unknown): Record<string, unknown>[] => {
   throw new Error('Unexpected NASA response shape');
 };
 
+const eventDate = (record: Record<string, unknown>, fallback: string): string => {
+  const raw = [record.beginTime, record.startTime, record.eventTime, record.time21_5].find((value): value is string => typeof value === 'string');
+  return raw?.slice(0, 10) || fallback;
+};
+
 export const getSpaceWeather = async (fetcher: FetchLike = fetch, now = new Date()): Promise<SpaceWeather> => {
   try {
     const end = dateOnly(now);
     const start = dateOnly(new Date(now.getTime() - 14 * 86_400_000));
     const base = `https://api.nasa.gov/DONKI`;
     const [flares, cmes, storms] = await Promise.all(['FLR', 'CME', 'GST'].map((kind) => cachedJson<unknown>(`donki-${kind}-${end}`, `${base}/${kind}?startDate=${start}&endDate=${end}&api_key=${nasaKey()}`, fetcher)));
-    const count = asArray(flares).length + asArray(cmes).length + asArray(storms).length;
+    const grouped = [['FLR', asArray(flares)], ['CME', asArray(cmes)], ['GST', asArray(storms)]] as const;
+    const count = grouped.reduce((total, [, records]) => total + records.length, 0);
     if (count === 0) throw new Error('No recent DONKI events');
-    return { severity: Math.min(3, Math.max(1, Math.ceil(count / 3))), events: count, badge: 'LIVE', source: 'NASA DONKI FLR, CME, and GST events from the last 14 days.' };
+    const [kind, records] = grouped.find(([, entries]) => entries.length > 0)!;
+    const record = records[0];
+    const classification = typeof record.classType === 'string' ? ` · ${record.classType}` : '';
+    return { severity: Math.min(3, Math.max(1, Math.ceil(count / 3))), events: count, eventClass: `${kind}${classification}`, eventDate: eventDate(record, end), badge: 'LIVE', source: 'NASA DONKI FLR, CME, and GST events from the last 14 days.' };
   } catch {
     return archivedWeather;
   }
@@ -78,7 +87,7 @@ export const loadNasaData = async (fetcher: FetchLike = fetch): Promise<NasaData
   return { weather, radiation, science };
 };
 
-export const calibrationFromData = (data: NasaDataBundle): { stormSeverity: number; doseMultiplier: number } => ({
-  stormSeverity: Math.max(0, data.weather.severity - 1),
+export const calibrationFromData = (data: NasaDataBundle, useTodayWeather = false): { stormSeverity: number; doseMultiplier: number } => ({
+  stormSeverity: useTodayWeather ? Math.max(0, data.weather.severity - 1) : 0,
   doseMultiplier: Math.min(1.5, Math.max(0.7, data.radiation.doseRate / 0.42)),
 });

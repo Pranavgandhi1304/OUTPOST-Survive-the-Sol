@@ -1,6 +1,8 @@
 export interface SpaceWeather {
   severity: number;
   events: number;
+  eventClass: string;
+  eventDate: string;
   badge: `LIVE` | `ARCHIVED (${string})`;
   source: string;
 }

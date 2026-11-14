@@ -3,6 +3,8 @@ import type { ScienceCard, SpaceWeather, RadiationReading } from './types';
 export const archivedWeather: SpaceWeather = {
   severity: 2,
   events: 3,
+  eventClass: 'FLR · M-class flare',
+  eventDate: '2025-10-01',
   badge: 'ARCHIVED (2025-10-01)',
   source: 'Curated DONKI fallback: solar flare, CME, and geomagnetic-storm examples.',
 };
