@@ -39,6 +39,7 @@ export interface MissionState {
   science: number;
   greenhouseYield: number;
   seed: number;
+  calibration: { stormSeverity: number; doseMultiplier: number };
   event: GameEvent;
   replay: ReplayEntry[];
   outcome: 'playing' | 'won' | 'failed';

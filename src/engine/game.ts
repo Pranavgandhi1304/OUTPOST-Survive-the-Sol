@@ -17,9 +17,9 @@ const sum = (allocation: Allocation): number => Object.values(allocation).reduce
 
 export const quietEvent = (): GameEvent => ({ kind: 'quiet', severity: 0, title: 'Quiet space weather', message: 'A calm sol gives your crew a chance to prepare.' });
 
-const eventFor = (site: Site, seed: number): [number, GameEvent] => {
+const eventFor = (site: Site, seed: number, severityBoost = 0): [number, GameEvent] => {
   const [nextSeed, roll] = nextRandom(seed);
-  const severity = 1 + Math.floor((((nextSeed >>> 8) % 3) + roll) % 3);
+  const severity = Math.min(3, 1 + Math.floor((((nextSeed >>> 8) % 3) + roll) % 3) + severityBoost);
   if (roll < 0.14) return [nextSeed, { kind: 'solarStorm', severity, title: 'Solar storm', message: 'Fast particles are racing toward your outpost.' }];
   if (site === 'mars' && roll < 0.29) return [nextSeed, { kind: 'dustStorm', severity, title: 'Dust storm', message: 'Dust is blocking the Sun.' }];
   if (roll < 0.39) return [nextSeed, { kind: 'equipmentFault', severity, title: 'Equipment fault', message: 'A machine needs extra power to keep working.' }];
@@ -53,7 +53,7 @@ export const normalizeAllocation = (allocation: Allocation, budget: number): All
   };
 };
 
-export const createMission = (site: Site, seed = 2026): MissionState => ({
+export const createMission = (site: Site, seed = 2026, calibration = { stormSeverity: 0, doseMultiplier: 1 }): MissionState => ({
   site,
   turn: 1,
   power: site === 'moon' ? 17 : 14,
@@ -66,6 +66,7 @@ export const createMission = (site: Site, seed = 2026): MissionState => ({
   science: 0,
   greenhouseYield: 0,
   seed,
+  calibration,
   event: quietEvent(),
   replay: [],
   outcome: 'playing',
@@ -82,7 +83,7 @@ const failure = (state: MissionState): string | undefined => {
 export const advanceTurn = (state: MissionState, requested: Allocation, forcedEvent?: GameEvent): TurnResult => {
   if (state.outcome !== 'playing') return { state, availablePower: 0, solarPower: 0, usedPower: 0, event: state.event };
 
-  const [nextSeed, rolledEvent] = eventFor(state.site, state.seed);
+  const [nextSeed, rolledEvent] = eventFor(state.site, state.seed, state.calibration.stormSeverity);
   const event = forcedEvent ?? rolledEvent;
   const solarPower = solarForTurn(state.site, state.turn, event);
   const availablePower = solarPower + state.battery;
@@ -92,7 +93,7 @@ export const advanceTurn = (state: MissionState, requested: Allocation, forcedEv
   const batteryDraw = Math.max(0, usedPower - solarPower);
   const battery = clamp(state.battery - batteryDraw + surplus, 0, BATTERY_CAPACITY);
   const lifeGap = Math.max(0, 5 - allocation.lifeSupport);
-  const stormDose = event.kind === 'solarStorm' ? event.severity * 9 * (1 - state.shielding / 100) : 0;
+  const stormDose = event.kind === 'solarStorm' ? event.severity * 9 * state.calibration.doseMultiplier * (1 - state.shielding / 100) : 0;
   const newShielding = clamp(state.shielding - 2 + allocation.shielding * 4);
   const food = clamp(state.food - 2 + state.greenhouseYield, 0, 100);
   const healthHit = lifeGap * 3 + (food < 10 ? 5 : 0) + (stormDose > 9 ? 3 : 0);
