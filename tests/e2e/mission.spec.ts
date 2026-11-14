@@ -33,15 +33,26 @@ const resetTutorial = async (page: import('@playwright/test').Page): Promise<voi
   await page.addInitScript(() => localStorage.removeItem('outpost:tutorial-seen'));
 };
 
+const setPower = async (page: import('@playwright/test').Page, name: string, value: number): Promise<void> => {
+  await page.getByLabel(name).evaluate((element, nextValue) => {
+    const input = element as HTMLInputElement;
+    input.value = String(nextValue);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  }, value);
+};
+
+const setMoonPlan = async (page: import('@playwright/test').Page, plan: { lifeSupport: number; shielding: number; greenhouse: number; science: number }): Promise<void> => {
+  await setPower(page, 'Life Support power units', plan.lifeSupport);
+  await setPower(page, 'Radiation Shield power units', plan.shielding);
+  await setPower(page, 'Greenhouse power units', plan.greenhouse);
+  await setPower(page, 'Science / Comms power units', plan.science);
+};
+
 const runMoonMission = async (page: import('@playwright/test').Page): Promise<void> => {
   for (let sol = 0; sol < 30; sol += 1) {
-    if (sol === 15) {
-      const setPower = async (name: string, value: number): Promise<void> => page.getByLabel(name).evaluate((element, nextValue) => { const input = element as HTMLInputElement; input.value = String(nextValue); input.dispatchEvent(new Event('input', { bubbles: true })); }, value);
-      await setPower('Life Support power units', 4);
-      await setPower('Radiation Shield power units', 1);
-      await setPower('Greenhouse power units', 0);
-      await setPower('Science / Comms power units', 0);
-    }
+    await setMoonPlan(page, sol < 15
+      ? { lifeSupport: 6, shielding: 3, greenhouse: 3, science: 2 }
+      : { lifeSupport: 4, shielding: 1, greenhouse: 0, science: 0 });
     const button = page.getByRole('button', { name: /run sol/i });
     if (!(await button.isVisible())) break;
     await button.click();
@@ -65,6 +76,22 @@ test('plays a complete desktop mission with no console errors', async ({ page })
   await expect(page.getByRole('heading', { level: 1, name: /outpost survive the sol/i })).toBeVisible();
   await finishMoonMission(page);
   expect(errors).toEqual([]);
+});
+
+test('wins the reproducible Moon demo with an explicit recording plan', async ({ page }) => {
+  const daylightPlan = { lifeSupport: 6, shielding: 3, greenhouse: 3, science: 2 };
+  const nightPlan = { lifeSupport: 4, shielding: 1, greenhouse: 0, science: 0 };
+  console.log(`Moon demo recording plan: sols 1-15 ${JSON.stringify(daylightPlan)}; sols 16-30 ${JSON.stringify(nightPlan)}.`);
+  await silenceNasa(page);
+  await resetTutorial(page);
+  await page.goto('/?demo=1');
+  await completeTutorial(page);
+  await page.getByRole('button', { name: /start the 30-sol mission/i }).click();
+  for (let sol = 0; sol < 30; sol += 1) {
+    await setMoonPlan(page, sol < 15 ? daylightPlan : nightPlan);
+    await page.getByRole('button', { name: /run sol/i }).click();
+  }
+  await expect(page.getByRole('heading', { name: /you made it through 30 sols/i })).toBeVisible();
 });
 
 test('plays a complete mission at 375px mobile width', async ({ page }) => {
